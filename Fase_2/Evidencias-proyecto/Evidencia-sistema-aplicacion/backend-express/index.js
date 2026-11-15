@@ -179,4 +179,8 @@ app.use('/api/admin/solicitudes', solicitudesAdminRoutes);
 const pushRoutes = require('./routes/push');
 app.use('/api/push', pushRoutes);
 
-app.listen(3000, () => console.log('Servidor corriendo en puerto 3000'));
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(3000, () => console.log('Servidor corriendo en puerto 3000'));
+}
