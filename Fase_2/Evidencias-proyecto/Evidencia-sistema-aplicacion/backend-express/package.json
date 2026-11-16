@@ -140,8 +140,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "jest": "^30.5.2",
-    "nodemon": "^3.1.14",
-    "supertest": "^7.3.2"
+    "nodemon": "^3.1.14"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.3": true,
+    "bcrypt@6.0.0": true,
+    "protobufjs@7.6.6": true
   }
 }

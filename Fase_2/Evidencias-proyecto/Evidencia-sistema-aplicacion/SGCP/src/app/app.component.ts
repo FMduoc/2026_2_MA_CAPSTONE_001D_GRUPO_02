@@ -7,8 +7,9 @@ import { Preferences } from '@capacitor/preferences';
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
-  standalone: true,
-  imports: [IonicModule],
+  styleUrls: ['app.component.scss'],
+  standalone: false,
+  //imports: [IonApp, IonRouterOutlet]
 })
 export class AppComponent {
   constructor(private router: Router) {
