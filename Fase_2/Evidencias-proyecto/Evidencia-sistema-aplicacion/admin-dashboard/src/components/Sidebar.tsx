@@ -17,6 +17,9 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { authService } from '../services/authService';
 import HistoryIcon from '@mui/icons-material/History';
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import { useState } from 'react'; // Para información de usuario en localStorage
+import logo from '../assets/logoDuoc.png'; 
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const DRAWER_WIDTH = 240;
 
@@ -25,6 +28,7 @@ const opciones = [
   { texto: 'Salas y QR', ruta: '/salas', icono: <MeetingRoomIcon /> },
   { texto: 'Historial', ruta: '/historial', icono: <HistoryIcon /> },
   { texto: 'Tablero', ruta: '/kanban', icono: <ViewKanbanIcon /> },
+  { texto: 'Reportes', ruta: '/reportes', icono: <AssessmentIcon /> },
 ];
 
 export function Sidebar() {
