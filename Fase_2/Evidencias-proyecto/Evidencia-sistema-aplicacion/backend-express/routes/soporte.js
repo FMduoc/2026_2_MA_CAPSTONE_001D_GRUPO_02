@@ -1,4 +1,4 @@
-//soporte.js
+
 const express = require('express');
 const pool = require('../db');
 const verificarToken = require('../middleware/auth');
@@ -20,7 +20,10 @@ function obtenerCategoriaPorRol(rol) {
   return categoriaPorRol[rol];
 }
 
-// Orden reutilizable: primero por estado, luego por urgencia, luego por antigüedad
+// =====================================================
+// ORDEN DE PRIORIDAD
+// =====================================================
+
 const ORDEN_PRIORIDAD = `
   CASE
     WHEN s.estado = 'pendiente' THEN 1
@@ -38,8 +41,7 @@ const ORDEN_PRIORIDAD = `
 `;
 
 // =====================================================
-// LISTAR SOLICITUDES SEGÚN EL ROL DEL USUARIO
-// (ahora priorizadas también por urgencia, no solo por estado)
+// LISTAR SOLICITUDES SEGÚN EL ROL
 // =====================================================
 
 router.get('/solicitudes', verificarToken, async (req, res) => {
@@ -55,12 +57,11 @@ router.get('/solicitudes', verificarToken, async (req, res) => {
   }
 
   try {
-    // Consultamos el estado actual de disponibilidad directo de la BD,
-    // no del token, porque puede haber cambiado desde el login.
     const usuarioResult = await pool.query(
       'SELECT disponible FROM usuario WHERE id = $1',
       [usuarioId]
     );
+
     const disponible = usuarioResult.rows[0]?.disponible ?? true;
 
     const result = await pool.query(
@@ -79,8 +80,7 @@ router.get('/solicitudes', verificarToken, async (req, res) => {
         s.fecha_creacion,
         s.fecha_actualizacion
       FROM solicitud s
-      JOIN sala sa
-        ON s.sala_id = sa.id
+      JOIN sala sa ON s.sala_id = sa.id
       WHERE s.categoria = $1
         AND (
           s.estado = 'terminada'
@@ -92,17 +92,19 @@ router.get('/solicitudes', verificarToken, async (req, res) => {
       [categoria, disponible, usuarioId]
     );
 
-    res.json(result.rows);
+    return res.json(result.rows);
 
   } catch (err) {
     console.error('Error al obtener solicitudes de soporte:', err);
-    res.status(500).json({ error: err.message });
+
+    return res.status(500).json({
+      error: err.message
+    });
   }
 });
 
 // =====================================================
-// NOTIFICACIONES / SOLICITUDES PENDIENTES SEGÚN ROL
-// (también ordenadas por urgencia)
+// NOTIFICACIONES SEGÚN ROL
 // =====================================================
 
 router.get('/notificaciones', verificarToken, async (req, res) => {
@@ -122,11 +124,14 @@ router.get('/notificaciones', verificarToken, async (req, res) => {
       'SELECT disponible FROM usuario WHERE id = $1',
       [usuarioId]
     );
+
     const disponible = usuarioResult.rows[0]?.disponible ?? true;
 
-    // Si no está disponible, no debe recibir notificaciones de pendientes nuevas
     if (!disponible) {
-      return res.json({ cantidad: 0, solicitudes: [] });
+      return res.json({
+        cantidad: 0,
+        solicitudes: []
+      });
     }
 
     const result = await pool.query(
@@ -140,10 +145,8 @@ router.get('/notificaciones', verificarToken, async (req, res) => {
         s.fecha_creacion,
         sa.nombre AS sala_nombre
       FROM solicitud s
-      JOIN sala sa
-        ON s.sala_id = sa.id
-      WHERE
-        s.categoria = $1
+      JOIN sala sa ON s.sala_id = sa.id
+      WHERE s.categoria = $1
         AND s.estado = 'pendiente'
       ORDER BY
         CASE s.urgencia
@@ -157,19 +160,24 @@ router.get('/notificaciones', verificarToken, async (req, res) => {
       [categoria]
     );
 
-    res.json({
+    return res.json({
       cantidad: result.rows.length,
       solicitudes: result.rows
     });
 
   } catch (err) {
     console.error('Error al obtener notificaciones:', err);
-    res.status(500).json({ error: err.message });
+
+    return res.status(500).json({
+      error: err.message
+    });
   }
 });
 
 // =====================================================
-// MARCAR SOLICITUD COMO ATENDIDA
+// ATENDER SOLICITUD
+// PROTECCIÓN CONTRA DOBLE ASIGNACIÓN
+// PRUEBA CP-21
 // =====================================================
 
 router.patch(
@@ -190,6 +198,11 @@ router.patch(
     }
 
     try {
+
+      // PostgreSQL realiza este UPDATE de forma atómica.
+      // Solo un técnico puede cambiar la solicitud
+      // desde pendiente a atendida.
+
       const result = await pool.query(
         `
         UPDATE solicitud
@@ -201,6 +214,7 @@ router.patch(
           id = $2
           AND categoria = $3
           AND estado = 'pendiente'
+          AND atendido_por IS NULL
         RETURNING *
         `,
         [
@@ -210,22 +224,53 @@ router.patch(
         ]
       );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          error:
-            'Solicitud no encontrada, ya fue atendida o no corresponde a tu área'
+      // ===============================================
+      // SOLICITUD ASIGNADA CORRECTAMENTE
+      // ===============================================
+
+      if (result.rowCount > 0) {
+        return res.status(200).json({
+          mensaje: 'Solicitud asignada correctamente',
+          solicitud: result.rows[0]
         });
       }
 
-      res.json({
-        mensaje: 'Solicitud marcada como atendida',
-        solicitud: result.rows[0]
+      // ===============================================
+      // REVISAR POR QUÉ NO SE PUDO ASIGNAR
+      // ===============================================
+
+      const verificacion = await pool.query(
+        `
+        SELECT
+          id,
+          estado,
+          atendido_por
+        FROM solicitud
+        WHERE id = $1
+          AND categoria = $2
+        `,
+        [id, categoria]
+      );
+
+      // La solicitud no existe o pertenece a otra área.
+      if (verificacion.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Solicitud no encontrada o no corresponde a tu área'
+        });
+      }
+
+      // La solicitud existe, pero ya no se puede tomar.
+      // El frontend deberá mostrar un modal al recibir 409.
+
+      return res.status(409).json({
+        error: 'Esta solicitud ya está siendo atendida por otro técnico o no está disponible.',
+        codigo: 'SOLICITUD_NO_DISPONIBLE'
       });
 
     } catch (err) {
       console.error('Error al atender solicitud:', err);
 
-      res.status(500).json({
+      return res.status(500).json({
         error: err.message
       });
     }
@@ -281,7 +326,7 @@ router.patch(
         });
       }
 
-      res.json({
+      return res.json({
         mensaje: 'Solicitud marcada como terminada',
         solicitud: result.rows[0]
       });
@@ -289,7 +334,7 @@ router.patch(
     } catch (err) {
       console.error('Error al terminar solicitud:', err);
 
-      res.status(500).json({
+      return res.status(500).json({
         error: err.message
       });
     }
@@ -330,20 +375,19 @@ router.patch('/disponibilidad', verificarToken, async (req, res) => {
       [disponible, usuarioId]
     );
 
-    res.json(result.rows[0]);
+    return res.json(result.rows[0]);
 
   } catch (err) {
     console.error('Error al actualizar disponibilidad:', err);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: err.message
     });
   }
 });
 
 // =====================================================
-// COBERTURA: ¿HAY PERSONAL DISPONIBLE PARA UNA CATEGORÍA?
-// (usado por el solicitante antes/después de enviar una solicitud)
+// COBERTURA DE PERSONAL POR CATEGORÍA
 // =====================================================
 
 router.get('/cobertura/:categoria', verificarToken, async (req, res) => {
@@ -359,7 +403,7 @@ router.get('/cobertura/:categoria', verificarToken, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT COUNT(*) 
+      SELECT COUNT(*)
       FROM usuario
       WHERE rol = $1::rol_usuario
         AND disponible = true
@@ -367,14 +411,18 @@ router.get('/cobertura/:categoria', verificarToken, async (req, res) => {
       [categoria]
     );
 
-    const hayDisponibles = parseInt(result.rows[0].count, 10) > 0;
+    const hayDisponibles =
+      parseInt(result.rows[0].count, 10) > 0;
 
-    res.json({ categoria, hayDisponibles });
+    return res.json({
+      categoria,
+      hayDisponibles
+    });
 
   } catch (err) {
     console.error('Error al consultar cobertura:', err);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: err.message
     });
   }
