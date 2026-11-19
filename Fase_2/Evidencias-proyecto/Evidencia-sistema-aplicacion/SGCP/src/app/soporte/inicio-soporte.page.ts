@@ -27,6 +27,7 @@ export class InicioSoportePage implements OnInit {
 
   // NUEVO: controla la solicitud que se está intentando atender
   atendiendoId: number | null = null;
+  terminandoId: number | null = null;
 
   // Filtro de urgencia
   filtroUrgencia = 'todas';
