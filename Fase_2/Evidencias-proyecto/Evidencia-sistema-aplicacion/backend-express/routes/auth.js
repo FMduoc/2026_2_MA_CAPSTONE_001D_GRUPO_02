@@ -7,9 +7,9 @@ const router = express.Router();
 
 // Registro de usuarios
 router.post('/register', async (req, res) => {
-  const { nombre, apellido, email, contrasena, rol } = req.body;
+  const { nombre, apellido, email, rut, telefono, contrasena, rol } = req.body;
 
-  if (!nombre || !apellido || !email || !contrasena || !rol) {
+  if (!nombre || !apellido || !email || !rut || !telefono || !contrasena || !rol) {
     return res.status(400).json({
       error: 'Todos los campos son obligatorios'
     });
@@ -29,12 +29,35 @@ router.post('/register', async (req, res) => {
     });
   }
 
+  const rutNormalizado = normalizarRut(rut);
+  const telefonoNormalizado = String(telefono).trim();
+  const correoNormalizado = String(email).trim().toLowerCase();
+
+  if (!validarRut(rutNormalizado)) {
+    return res.status(400).json({
+      error: 'El RUT ingresado no es válido'
+    });
+  }
+
+  // Validación básica del teléfono.
+  const telefonoDigitos = telefonoNormalizado.replace(/\D/g, '');
+
+  if (
+    telefonoDigitos.length < 8 ||
+    telefonoDigitos.length > 15
+  ) {
+    return res.status(400).json({
+      error: 'El teléfono ingresado no es válido'
+    });
+  }
+
   try {
-    const correoNormalizado = email.trim().toLowerCase();
 
     const existente = await pool.query(
-      'SELECT id FROM usuario WHERE email = $1',
-      [correoNormalizado]
+      `SELECT id
+       FROM usuario
+       WHERE email = $1 OR rut = $2`,
+      [correoNormalizado, rutNormalizado]
     );
 
     if (existente.rows.length > 0) {
@@ -47,14 +70,16 @@ router.post('/register', async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO usuario
-        (nombre, apellido, email, contrasena_hash, rol)
+        (nombre, apellido, email, contrasena_hash, rol, rut, telefono)
        VALUES
-        ($1, $2, $3, $4, $5)
+        ($1, $2, $3, $4, $5, $6, $7)
        RETURNING
         id,
         nombre,
         apellido,
         email,
+        rut,
+        telefono,
         rol,
         fecha_creacion`,
       [
@@ -62,7 +87,9 @@ router.post('/register', async (req, res) => {
         apellido.trim(),
         correoNormalizado,
         contrasena_hash,
-        rol
+        rol,
+        rutNormalizado,
+        telefonoNormalizado,
       ]
     );
 
@@ -71,8 +98,14 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error(err);
 
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'El email o RUT ya está registrado'
+      });
+    }
+
     res.status(500).json({
-      error: err.message
+      error: 'No se pudo registrar el usuario'
     });
   }
 });
@@ -112,6 +145,8 @@ router.post('/login', async (req, res) => {
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         email: usuario.email,
+        rut: usuario.rut,
+        telefono: usuario.telefono,
         rol: usuario.rol,
         disponible: usuario.disponible, // <-- agregado
       }
@@ -125,7 +160,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', verificarToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, nombre, apellido, email, rol, disponible
+      `SELECT id, nombre, apellido, email, rut, telefono, rol, disponible
        FROM usuario
        WHERE id = $1`,
       [req.usuario.id]
@@ -149,5 +184,50 @@ res.json({ ...usuario, token });
     res.status(500).json({ error: err.message });
   }
 });
+
+// Función Módulo 11 | RUT
+
+// Normalizar RUT: eliminar puntos, espacios y convertir k en K.
+const normalizarRut = (rut) => {
+  return String(rut)
+    .replace(/\./g, '')
+    .replace(/\s/g, '')
+    .toUpperCase();
+};
+
+// Validar RUT chileno mediante módulo 11.
+const validarRut = (rut) => {
+  const rutNormalizado = normalizarRut(rut);
+
+  if (!/^\d{7,8}-[\dK]$/.test(rutNormalizado)) {
+    return false;
+  }
+
+  const [cuerpo, digitoIngresado] = rutNormalizado.split('-');
+
+  let suma = 0;
+  let multiplicador = 2;
+
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * multiplicador;
+
+    multiplicador =
+      multiplicador === 7 ? 2 : multiplicador + 1;
+  }
+
+  const resto = 11 - (suma % 11);
+
+  let digitoCalculado;
+
+  if (resto === 11) {
+    digitoCalculado = '0';
+  } else if (resto === 10) {
+    digitoCalculado = 'K';
+  } else {
+    digitoCalculado = String(resto);
+  }
+
+  return digitoCalculado === digitoIngresado;
+};
 
 module.exports = router;
