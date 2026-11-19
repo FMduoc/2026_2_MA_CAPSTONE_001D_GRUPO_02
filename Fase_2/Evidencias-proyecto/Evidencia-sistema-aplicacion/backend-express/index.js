@@ -12,7 +12,7 @@ const CATEGORIAS_PERMITIDAS = ['tecnico', 'enfermeria', 'seguridad', 'limpieza']
 const URGENCIAS_PERMITIDAS = ['baja', 'media', 'alta', 'critica'];
 
 // Crear una solicitud
-//const { notificarStaffDisponible } = require('./utils/notificaciones');
+const { notificarStaffDisponible } = require('./utils/notificaciones');
 
 app.post('/api/solicitudes', verificarToken, async (req, res) => {
   const { sala_id, descripcion, categoria, urgencia = 'media' } = req.body;
@@ -43,7 +43,7 @@ app.post('/api/solicitudes', verificarToken, async (req, res) => {
     const salaResult = await pool.query('SELECT nombre FROM sala WHERE id = $1', [sala_id]);
     const solicitudConSala = { ...solicitudCreada, sala_nombre: salaResult.rows[0]?.nombre || '' };
 
-    //notificarStaffDisponible(categoria, solicitudConSala); // sin await: no bloquea la respuesta
+    notificarStaffDisponible(categoria, solicitudConSala); // sin await: no bloquea la respuesta
 
     res.status(201).json(solicitudCreada);
   } catch (err) {
