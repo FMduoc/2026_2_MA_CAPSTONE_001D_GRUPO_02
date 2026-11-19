@@ -281,65 +281,70 @@ router.patch(
 // MARCAR SOLICITUD COMO TERMINADA
 // =====================================================
 
-router.patch(
-  '/solicitudes/:id/terminar',
-  verificarToken,
-  async (req, res) => {
+router.patch('/solicitudes/:id/terminar', verificarToken, async (req, res) => {
+  const { id } = req.params;
+  const usuarioId = req.usuario.id;
+  const categoria = obtenerCategoriaPorRol(req.usuario.rol);
 
-    const { id } = req.params;
-    const usuarioId = req.usuario.id;
-    const rol = req.usuario.rol;
-
-    const categoria = obtenerCategoriaPorRol(rol);
-
-    if (!categoria) {
-      return res.status(403).json({
-        error: 'El usuario no posee un rol de soporte válido'
-      });
-    }
-
-    try {
-      const result = await pool.query(
-        `
-        UPDATE solicitud
-        SET
-          estado = 'terminada',
-          fecha_actualizacion = NOW()
-        WHERE
-          id = $1
-          AND categoria = $2
-          AND estado = 'atendida'
-          AND atendido_por = $3
-        RETURNING *
-        `,
-        [
-          id,
-          categoria,
-          usuarioId
-        ]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          error:
-            'La solicitud no existe, no está atendida o está asignada a otro usuario'
-        });
-      }
-
-      return res.json({
-        mensaje: 'Solicitud marcada como terminada',
-        solicitud: result.rows[0]
-      });
-
-    } catch (err) {
-      console.error('Error al terminar solicitud:', err);
-
-      return res.status(500).json({
-        error: err.message
-      });
-    }
+  if (!categoria) {
+    return res.status(403).json({ error: 'El usuario no posee un rol de soporte válido' });
   }
-);
+
+  const codigoQr = typeof req.body?.codigo_qr === 'string' ? req.body.codigo_qr.trim() : '';
+  if (!codigoQr) {
+    return res.status(400).json({
+      error: 'Debes escanear el código QR de la sala para cerrar la solicitud',
+    });
+  }
+
+  const ERROR_NO_DISPONIBLE =
+    'La solicitud no existe, no está atendida o está asignada a otro usuario';
+
+  try {
+    const actual = await pool.query(
+      `SELECT s.categoria, s.estado, s.atendido_por, sa.codigo_qr
+       FROM solicitud s
+       JOIN sala sa ON sa.id = s.sala_id
+       WHERE s.id = $1`,
+      [id]
+    );
+
+    const s = actual.rows[0];
+
+    if (
+      !s ||
+      s.categoria !== categoria ||
+      s.estado !== 'atendida' ||
+      Number(s.atendido_por) !== Number(usuarioId)
+    ) {
+      return res.status(404).json({ error: ERROR_NO_DISPONIBLE });
+    }
+
+    if (s.codigo_qr !== codigoQr) {
+      return res.status(422).json({
+        error: 'El código QR no corresponde a la sala de esta solicitud',
+      });
+    }
+
+    // La condición se repite en el UPDATE por si el estado cambió entre las dos consultas
+    const result = await pool.query(
+      `UPDATE solicitud
+       SET estado = 'terminada', fecha_actualizacion = NOW()
+       WHERE id = $1 AND categoria = $2 AND estado = 'atendida' AND atendido_por = $3
+       RETURNING *`,
+      [id, categoria, usuarioId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: ERROR_NO_DISPONIBLE });
+    }
+
+    res.json({ mensaje: 'Solicitud marcada como terminada', solicitud: result.rows[0] });
+  } catch (err) {
+    console.error('Error al terminar solicitud:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // =====================================================
 // DISPONIBILIDAD DEL PERSONAL DE SOPORTE

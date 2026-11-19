@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../services/auth';
 import { environment } from '../../environments/environment';
 import { FormsModule } from '@angular/forms';
+import { QrScannerService } from '../services/qr-scanner';
 
 @Component({
   selector: 'app-inicio-soporte',
@@ -43,15 +44,14 @@ export class InicioSoportePage implements OnInit {
 
   private apiUrl = `${environment.apiUrl}/soporte`;
 
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    private http: HttpClient,
-    private cdr: ChangeDetectorRef,
-
-    // NUEVO: controlador para mostrar modales
-    private alertController: AlertController
-  ) {}
+constructor(
+  private authService: AuthService,
+  private router: Router,
+  private http: HttpClient,
+  private cdr: ChangeDetectorRef,
+  private alertController: AlertController,
+  private qrScanner: QrScannerService
+) {}
 
   async ngOnInit() {
     this.usuario = await this.authService.getUsuario();
@@ -318,35 +318,87 @@ export class InicioSoportePage implements OnInit {
   // TERMINAR SOLICITUD
   // =====================================================
 
-  async terminarSolicitud(id: number) {
+   async terminarSolicitud(id: number) {
+    if (this.terminandoId !== null) return;
     this.error = '';
+
+    // 1. Avisar qué se va a pedir
+    if (!(await this.confirmarEscaneo())) return;
+
+    // 2. Escanear el QR de la sala
+    const resultado = await this.qrScanner.escanear();
+
+    if (resultado.estado === 'cancelado') return;
+    if (resultado.estado === 'permiso_denegado') {
+      this.error = 'Se requiere permiso de cámara para escanear el código de la sala';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (resultado.estado === 'error') {
+      this.error = 'No se pudo escanear el código. Intenta de nuevo.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // 3. El backend valida que el QR sea el de la sala de esta solicitud
+    this.terminandoId = id;
+    this.cdr.detectChanges();
 
     try {
       await firstValueFrom(
         this.http.patch(
           `${this.apiUrl}/solicitudes/${id}/terminar`,
-          {},
-          {
-            headers: await this.obtenerHeaders(),
-          }
+          { codigo_qr: resultado.codigo },
+          { headers: await this.obtenerHeaders() }
         )
       );
 
+      await this.mostrarAlerta('Solicitud cerrada', 'La solicitud quedó marcada como terminada.');
       await this.cargarSolicitudes();
-
     } catch (err: any) {
+      console.error('Error al terminar solicitud:', err);
 
-      console.error(
-        'Error al terminar solicitud:',
-        err
-      );
-
-      this.error =
-        err.error?.error ||
-        'No se pudo terminar la solicitud. Puede que ya haya sido actualizada por otro usuario.';
-
-      await this.cargarSolicitudes();
+      if (err.status === 422) {
+        await this.mostrarAlerta(
+          'QR incorrecto',
+          'El código escaneado no corresponde a la sala de esta solicitud. ' +
+            'Dirígete a la sala indicada y escanea su QR.'
+        );
+      } else {
+        this.error =
+          err.error?.error ||
+          'No se pudo terminar la solicitud. Puede que ya haya sido actualizada por otro usuario.';
+        await this.cargarSolicitudes();
+      }
+    } finally {
+      this.terminandoId = null;
+      this.cdr.detectChanges();
     }
+  }
+
+  private async confirmarEscaneo(): Promise<boolean> {
+    const alerta = await this.alertController.create({
+      header: 'Cerrar solicitud',
+      message: 'Para marcarla como terminada, escanea el código QR de la sala donde se atendió.',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        { text: 'Escanear QR', role: 'confirm' },
+      ],
+      backdropDismiss: false,
+    });
+    await alerta.present();
+    const { role } = await alerta.onDidDismiss();
+    return role === 'confirm';
+  }
+
+  private async mostrarAlerta(titulo: string, mensaje: string) {
+    const alerta = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido'],
+    });
+    await alerta.present();
+    await alerta.onDidDismiss();
   }
 
   // =====================================================

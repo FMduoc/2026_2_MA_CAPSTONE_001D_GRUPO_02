@@ -477,18 +477,19 @@
               <!-- SOLICITUD ATENDIDA POR ESTE USUARIO -->
               <!-- ================================== -->
 
-              <ion-button
-                *ngIf="
-                  solicitud.estado === 'atendida' &&
-                  solicitud.atendido_por === usuario?.id
-                "
-                expand="block"
-                class="terminar-button"
-                (click)="terminarSolicitud(solicitud.id)">
+            <ion-button
+              *ngIf="solicitud.estado === 'atendida' && solicitud.atendido_por === usuario?.id"
+              expand="block"
+              class="terminar-button"
+              [disabled]="terminandoId !== null"
+              (click)="terminarSolicitud(solicitud.id)">
 
-                Marcar como terminada
+              <ion-spinner *ngIf="terminandoId === solicitud.id" name="crescent" slot="start"></ion-spinner>
+              <ion-icon *ngIf="terminandoId !== solicitud.id" slot="start" name="qr-code-outline"></ion-icon>
 
-              </ion-button>
+              {{ terminandoId === solicitud.id ? 'Cerrando...' : 'Escanear QR y terminar' }}
+
+            </ion-button>
 
               <!-- ================================== -->
               <!-- SOLICITUD ATENDIDA POR OTRO USUARIO -->
