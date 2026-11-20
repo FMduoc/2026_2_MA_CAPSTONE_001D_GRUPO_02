@@ -1,118 +1,262 @@
-.atencion-page {
-  --background: #f4f6f8;
-  min-height: 100%;
+/* =========================
+   COLORES DUOC UC
+========================= */
+
+:host {
+  --duoc-azul: #0d2c54;
+  --duoc-azul-oscuro: #0a1f3d;
+  --duoc-amarillo: #ffc20e;
+}
+
+/* =========================
+   BARRA SUPERIOR
+   (la franja amarilla va como borde inferior
+   para no usar ion-content::before)
+========================= */
+
+ion-toolbar {
+  --background: var(--duoc-azul);
+  --color: #ffffff;
+  --border-width: 0;
+
+  border-bottom: 4px solid var(--duoc-amarillo);
+}
+
+ion-title {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+ion-back-button {
+  --color: #ffffff;
+}
+
+/* =========================
+   FONDO GENERAL CON DIAGONAL
+========================= */
+
+ion-content.atencion-page {
+  --background: linear-gradient(
+    135deg,
+    var(--duoc-azul) 0%,
+    var(--duoc-azul) 50%,
+    #ffffff 50.5%
+  );
 }
 
 .contenedor {
-  min-height: 100vh;
-  padding: 32px;
-  background:
-    linear-gradient(
-      135deg,
-      #003b5c 0%,
-      #003b5c 30%,
-      #f4f6f8 30%,
-      #f4f6f8 100%
-    );
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
 }
 
 .contenedor-section {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px;
-  background: #ffffff;
-  border-radius: 18px;
-  box-shadow:
-    0 14px 35px rgba(15, 23, 42, 0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
+/* =========================
+   MENSAJES (error / carga / vacío)
+========================= */
+
 .error-box {
-  background: #fdecea;
-  color: #b3261e;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
+  background: #fdecec;
+  color: #b42318;
+  border: 1px solid #f5b5b0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(10, 31, 61, 0.2);
 }
 
 .estado-carga {
-  text-align: center;
-  color: var(--ion-color-medium);
+  align-self: flex-start;
+  margin: 0;
+  padding: 10px 18px;
+  background: #ffffff;
+  color: var(--duoc-azul);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(10, 31, 61, 0.2);
 }
 
 .vacio {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 32px 24px;
   text-align: center;
-  padding: 48px 16px;
-  color: var(--ion-color-medium);
+  box-shadow: 0 10px 28px rgba(10, 31, 61, 0.35);
 
   h2 {
-    color: var(--ion-color-dark);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--duoc-azul);
+    margin: 0 0 8px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0 0 20px;
+  }
+
+  ion-button {
+    --background: var(--duoc-azul);
+    --border-radius: 12px;
+    font-weight: 700;
   }
 }
 
-.solicitud-card {
-  background: #fff;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+/* =========================
+   TARJETA DE SOLICITUD
+========================= */
 
+.solicitud-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 10px 28px rgba(10, 31, 61, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+
+  /* solicitud recién aceptada */
   &.destacada {
-    border-color: var(--ion-color-primary);
+    outline: 3px solid var(--duoc-amarillo);
+    outline-offset: -3px;
   }
 
   header {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
+    justify-content: space-between;
     gap: 12px;
+    margin-bottom: 14px;
 
     h2 {
-      margin: 4px 0 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--duoc-azul);
+      margin: 2px 0 0;
     }
   }
 
-  .solicitud-id {
-    font-size: 12px;
-    color: var(--ion-color-medium);
-  }
-
-  .descripcion {
-    font-size: 16px;
-    margin: 12px 0;
+  ion-button {
+    --background: var(--duoc-azul);
+    --background-activated: var(--duoc-azul-oscuro);
+    --border-radius: 12px;
+    font-weight: 700;
+    margin: 18px 0 0;
   }
 }
+
+.solicitud-id {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.descripcion {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: #f4f6fb;
+  border-left: 4px solid var(--duoc-amarillo);
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+/* =========================
+   DATOS (dl)
+========================= */
 
 .datos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0 0 16px;
-
-  div {
-    min-width: 0;
-  }
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 16px;
+  margin: 0;
 
   dt {
     font-size: 12px;
-    color: var(--ion-color-medium);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+    margin: 0 0 2px;
   }
 
   dd {
-    margin: 2px 0 0;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--duoc-azul);
+    margin: 0;
+    word-break: break-word;
+  }
+
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
   }
 }
 
+/* =========================
+   BADGE DE URGENCIA
+========================= */
+
 .urgencia-badge {
-  padding: 4px 10px;
+  flex-shrink: 0;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 
-  &.baja { background: #e8f5e9; color: #2e7d32; }
-  &.media { background: #e3f2fd; color: #1565c0; }
-  &.alta { background: #fff3e0; color: #e65100; }
-  &.critica { background: #fdecea; color: #b3261e; }
+  &.baja {
+    background: #e3f6ea;
+    color: #146c3a;
+  }
+
+  &.media {
+    background: #fff4cc;
+    color: #8a6100;
+  }
+
+  &.alta {
+    background: #ffe3cf;
+    color: #b44a00;
+  }
+
+  &.critica {
+    background: #fde0e0;
+    color: #b42318;
+  }
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 600px) {
+  ion-content.atencion-page {
+    --background: linear-gradient(
+      160deg,
+      var(--duoc-azul) 0%,
+      var(--duoc-azul) 50%,
+      #ffffff 50.5%
+    );
+  }
+
+  .solicitud-card header h2 {
+    font-size: 18px;
+  }
 }
