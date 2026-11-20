@@ -54,11 +54,13 @@ export class SoporteService {
     return data || [];
   }
 
-  async terminar(id: number): Promise<void> {
-    await firstValueFrom(
-      this.http.patch(`${this.apiUrl}/solicitudes/${id}/terminar`, {}, {
-        headers: await this.headers(),
-      })
-    );
-  }
+async terminar(id: number, codigoQr: string): Promise<void> {
+  await firstValueFrom(
+    this.http.patch(
+      `${this.apiUrl}/solicitudes/${id}/terminar`,
+      { codigo_qr: codigoQr },
+      { headers: await this.headers() }
+    )
+  );
+}
 }
