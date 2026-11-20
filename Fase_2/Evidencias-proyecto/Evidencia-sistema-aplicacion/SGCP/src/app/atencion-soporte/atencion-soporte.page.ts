@@ -48,33 +48,10 @@ export class AtencionSoportePage {
     const usuario = await this.authService.getUsuario();
     this.usuarioId = usuario?.id ?? null;
 
-    const params = this.route.snapshot.queryParamMap;
-    const idParam = params.get('id');
+    const idParam = this.route.snapshot.queryParamMap.get('id');
     this.idDestacado = idParam ? Number(idParam) : null;
 
-    const codigoRestaurado = params.get('codigoRestaurado');
-    const interrumpido = params.get('interrumpido');
-
     await this.cargar();
-
-    // Android cerró la app mientras la cámara estaba abierta (ver app.component.ts)
-    if (codigoRestaurado && this.idDestacado) {
-      this.limpiarQueryParams();
-      await this.finalizarConCodigo(this.idDestacado, codigoRestaurado);
-    } else if (interrumpido) {
-      this.limpiarQueryParams();
-      this.error = 'El escaneo se interrumpió porque el celular cerró la app. Intenta de nuevo.';
-      this.cdr.detectChanges();
-    }
-  }
-
-  // Quita los parámetros para que no se reprocesen al volver desde otra pantalla
-  private limpiarQueryParams() {
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: {},
-      replaceUrl: true,
-    });
   }
 
   // Solicitudes que este usuario aceptó y aún no termina.
@@ -114,8 +91,8 @@ export class AtencionSoportePage {
     // 1. Avisar qué se va a pedir
     if (!(await this.confirmarEscaneo())) return;
 
-    // 2. Escanear el QR de la sala (se registra para qué solicitud, por si Android cierra la app)
-    const resultado = await this.qrScanner.escanear({ solicitudId: id });
+    // 2. Escanear el QR de la sala
+    const resultado = await this.qrScanner.escanear();
 
     if (resultado.estado === 'cancelado') return;
 
@@ -131,20 +108,12 @@ export class AtencionSoportePage {
       return;
     }
 
-    // 3. Enviar el código al backend
-    await this.finalizarConCodigo(id, resultado.codigo);
-  }
-
-  // El backend valida que el QR sea el de la sala de esta solicitud
-  private async finalizarConCodigo(id: number, codigo: string) {
-    if (this.terminandoId !== null) return;
-
+    // 3. El backend valida que el QR sea el de la sala de esta solicitud
     this.terminandoId = id;
-    this.error = '';
     this.cdr.detectChanges();
 
     try {
-      await this.soporteService.terminar(id, codigo);
+      await this.soporteService.terminar(id, resultado.codigo);
 
       await this.mostrarAlerta(
         'Solicitud cerrada',
