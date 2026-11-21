@@ -1,97 +1,89 @@
-// src/app/services/solicitud.ts
+//services/soporte.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, firstValueFrom } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Solicitud } from '../models/solicitud.model';
 import { AuthService } from './auth';
 
+export interface SolicitudSoporte {
+  id: number;
+  sala_nombre: string;
+  nombre_solicitante: string;
+  descripcion: string;
+  categoria: string;
+  urgencia: string;
+  estado: string;
+  atendido_por: number | null;
+  descripcion_trabajo?: string | null;
+  fecha_creacion: string;
+  fecha_actualizacion: string | null;
+}
+
+const CATEGORIAS: Record<string, string> = {
+  tecnico: 'Servicio técnico',
+  enfermeria: 'Emergencia médica',
+  limpieza: 'Limpieza',
+  seguridad: 'Seguridad',
+};
+
+const URGENCIAS: Record<string, string> = {
+  baja: 'Baja',
+  media: 'Media',
+  alta: 'Alta',
+  critica: 'Crítica',
+};
+
+export const etiquetaCategoria = (categoria: string): string => CATEGORIAS[categoria] || categoria;
+export const etiquetaUrgencia = (urgencia: string): string => URGENCIAS[urgencia] || urgencia;
+
 @Injectable({ providedIn: 'root' })
-export class SolicitudService {
-  private apiUrl = `${environment.apiUrl}/solicitudes`;
+export class SoporteService {
+  private apiUrl = `${environment.apiUrl}/soporte`;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
-  async crear(datos: {
-      sala_id: number;
-      descripcion: string;
-      categoria: string;
-      urgencia?: string; // opcional: si no se envía, el backend usa 'media' por defecto
-    }): Promise<Solicitud> {
-      const token = await this.authService.getToken();
-      return firstValueFrom(
-        this.http.post<Solicitud>(this.apiUrl, datos, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-      );
-  }
-
-  listar(): Observable<Solicitud[]> {
-    return this.http.get<Solicitud[]>(this.apiUrl);
-  }
-
-  async listarAsignadas(): Promise<Solicitud[]> {
+  private async headers(): Promise<HttpHeaders> {
     const token = await this.authService.getToken();
-    return firstValueFrom(
-      this.http.get<Solicitud[]>(`${this.apiUrl}/asignadas`, {
-        headers: { Authorization: `Bearer ${token}` },
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  async listarSolicitudes(): Promise<SolicitudSoporte[]> {
+    const data = await firstValueFrom(
+      this.http.get<SolicitudSoporte[]>(`${this.apiUrl}/solicitudes`, {
+        headers: await this.headers(),
       })
     );
+    return data || [];
   }
 
-  async listarMias(): Promise<Solicitud[]> {
-    const token = await this.authService.getToken();
+  // Estado actual de una solicitud que este usuario está atendiendo
+  async consultarEstado(id: number): Promise<{ id: number; estado: string }> {
     return firstValueFrom(
-      this.http.get<Solicitud[]>(`${this.apiUrl}/mias`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    );
-  }
-    // Cancela una petición propia que aún no está terminada
-  async cancelar(id: number): Promise<{ mensaje: string; solicitud: Solicitud }> {
-    const token = await this.authService.getToken();
-    return firstValueFrom(
-      this.http.patch<{ mensaje: string; solicitud: Solicitud }>(
-        `${this.apiUrl}/${id}/cancelar`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      this.http.get<{ id: number; estado: string }>(
+        `${this.apiUrl}/solicitudes/${id}/estado`,
+        { headers: await this.headers() }
       )
     );
   }
 
-  // Nuevo: marca como "en proceso" y asigna el usuario responsable
-  async atender(id: number): Promise<{ mensaje: string; solicitud: Solicitud }> {
-    const token = await this.authService.getToken();
-    return firstValueFrom(
-      this.http.patch<{ mensaje: string; solicitud: Solicitud }>(
-        `${this.apiUrl}/${id}/atender`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+  async terminar(id: number, codigoQr: string): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.apiUrl}/solicitudes/${id}/terminar`,
+        { codigo_qr: codigoQr },
+        { headers: await this.headers() }
       )
     );
   }
 
-  // Nuevo: marca como "resuelta", solo si el mismo usuario la atendió
-  async terminar(id: number): Promise<{ mensaje: string; solicitud: Solicitud }> {
-    const token = await this.authService.getToken();
-    return firstValueFrom(
-      this.http.patch<{ mensaje: string; solicitud: Solicitud }>(
-        `${this.apiUrl}/${id}/terminar`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+  // Solo se puede guardar sobre una solicitud ya terminada por este mismo usuario
+  async guardarDescripcionTrabajo(id: number, descripcionTrabajo: string): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.apiUrl}/solicitudes/${id}/descripcion-trabajo`,
+        { descripcion_trabajo: descripcionTrabajo },
+        { headers: await this.headers() }
       )
     );
   }
-
-async consultarCobertura(categoria: string): Promise<{ categoria: string; hayDisponibles: boolean }> {
-    const token = await this.authService.getToken();
-    return firstValueFrom(
-      this.http.get<{ categoria: string; hayDisponibles: boolean }>(
-        `${environment.apiUrl}/soporte/cobertura/${categoria}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-    );
-  }
-
 }
-

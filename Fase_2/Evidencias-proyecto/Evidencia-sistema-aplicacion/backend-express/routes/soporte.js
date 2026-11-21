@@ -359,6 +359,37 @@ router.patch('/solicitudes/:id/terminar', verificarToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// =====================================================
+// ESTADO ACTUAL DE UNA SOLICITUD QUE ESTOY ATENDIENDO
+// =====================================================
+
+router.get('/solicitudes/:id/estado', verificarToken, async (req, res) => {
+  const { id } = req.params;
+  const usuarioId = req.usuario.id;
+  const categoria = obtenerCategoriaPorRol(req.usuario.rol);
+
+  if (!categoria) {
+    return res.status(403).json({ error: 'El usuario no posee un rol de soporte válido' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, estado
+       FROM solicitud
+       WHERE id = $1 AND categoria = $2 AND atendido_por = $3`,
+      [id, categoria, usuarioId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al consultar el estado de la solicitud:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // =====================================================
 // DESCRIPCIÓN DEL TRABAJO REALIZADO (opcional, tras terminar)

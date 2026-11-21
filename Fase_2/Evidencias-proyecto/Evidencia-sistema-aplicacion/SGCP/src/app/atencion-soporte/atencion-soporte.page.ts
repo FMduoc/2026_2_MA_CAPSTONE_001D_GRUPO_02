@@ -31,6 +31,9 @@ export class AtencionSoportePage {
   terminandoId: number | null = null;
   error = '';
 
+  // Evita toques repetidos mientras se verifica el estado de la solicitud
+  private verificando = false;
+
   // Se exponen para poder usarlas desde el template
   readonly etiquetaCategoria = etiquetaCategoria;
   readonly etiquetaUrgencia = etiquetaUrgencia;
@@ -88,8 +91,12 @@ export class AtencionSoportePage {
   // =====================================================
 
   async terminar(id: number) {
-    if (this.terminandoId !== null) return;
+    if (this.terminandoId !== null || this.verificando) return;
     this.error = '';
+
+    // 0. Al tocar el botón, comprobar que la solicitud siga en atención
+    //    (el solicitante pudo haberla cancelado) antes de abrir la cámara
+    if (!(await this.verificarSolicitudActiva(id))) return;
 
     // 1. Avisar qué se va a pedir
     if (!(await this.confirmarEscaneo())) return;
@@ -123,7 +130,13 @@ export class AtencionSoportePage {
     } catch (err: any) {
       console.error('Error al terminar solicitud:', err);
 
-      if (err.status === 422) {
+      // Respaldo: la cancelaron justo mientras se escaneaba el QR
+      if (err.status === 409 && err.error?.codigo === 'SOLICITUD_CANCELADA') {
+        await this.mostrarAlerta(
+          'Solicitud cancelada',
+          'Esta solicitud fue cancelada por el solicitante, por lo que ya no es necesario cerrarla.'
+        );
+      } else if (err.status === 422) {
         await this.mostrarAlerta(
           'QR incorrecto',
           'El código escaneado no corresponde a la sala de esta solicitud. ' +
@@ -147,6 +160,48 @@ export class AtencionSoportePage {
         'La solicitud quedó marcada como terminada.'
       );
       await this.pedirDescripcionTrabajo(id);
+    }
+  }
+
+  // Consulta el estado actual al tocar el botón. Devuelve true si se puede continuar.
+  private async verificarSolicitudActiva(id: number): Promise<boolean> {
+    this.verificando = true;
+
+    try {
+      const { estado } = await this.soporteService.consultarEstado(id);
+
+      if (estado === 'atendida') return true;
+
+      if (estado === 'cancelada') {
+        await this.mostrarAlerta(
+          'Solicitud cancelada',
+          'Esta solicitud fue cancelada por el solicitante, por lo que ya no es necesario cerrarla.'
+        );
+      } else {
+        await this.mostrarAlerta(
+          'Solicitud no disponible',
+          'Esta solicitud ya no está en atención.'
+        );
+      }
+
+      await this.cargar();
+      return false;
+    } catch (err: any) {
+      console.error('Error al verificar el estado de la solicitud:', err);
+
+      if (err.status === 404) {
+        await this.mostrarAlerta(
+          'Solicitud no disponible',
+          'Esta solicitud ya no está en atención.'
+        );
+        await this.cargar();
+        return false;
+      }
+
+      // Falla de red u otro error: no se bloquea al técnico, el backend vuelve a validar al cerrar
+      return true;
+    } finally {
+      this.verificando = false;
     }
   }
 
