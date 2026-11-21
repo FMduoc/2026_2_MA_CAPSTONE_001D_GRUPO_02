@@ -1,4 +1,5 @@
 
+//routes/soporte.js
 const express = require('express');
 const pool = require('../db');
 const verificarToken = require('../middleware/auth');
@@ -77,6 +78,7 @@ router.get('/solicitudes', verificarToken, async (req, res) => {
         s.urgencia,
         s.estado,
         s.atendido_por,
+        s.descripcion_trabajo,
         s.fecha_creacion,
         s.fecha_actualizacion
       FROM solicitud s
@@ -342,6 +344,53 @@ router.patch('/solicitudes/:id/terminar', verificarToken, async (req, res) => {
     res.json({ mensaje: 'Solicitud marcada como terminada', solicitud: result.rows[0] });
   } catch (err) {
     console.error('Error al terminar solicitud:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================================================
+// DESCRIPCIÓN DEL TRABAJO REALIZADO (opcional, tras terminar)
+// =====================================================
+
+router.patch('/solicitudes/:id/descripcion-trabajo', verificarToken, async (req, res) => {
+  const { id } = req.params;
+  const usuarioId = req.usuario.id;
+  const categoria = obtenerCategoriaPorRol(req.usuario.rol);
+
+  if (!categoria) {
+    return res.status(403).json({ error: 'El usuario no posee un rol de soporte válido' });
+  }
+
+  const texto =
+    typeof req.body?.descripcion_trabajo === 'string' ? req.body.descripcion_trabajo.trim() : '';
+
+  if (!texto) {
+    return res.status(400).json({ error: 'La descripción del trabajo no puede estar vacía' });
+  }
+  if (texto.length > 500) {
+    return res.status(400).json({ error: 'La descripción no puede superar los 500 caracteres' });
+  }
+
+  try {
+    // Solo quien atendió y terminó la solicitud puede describir el trabajo.
+    // No se toca fecha_actualizacion para conservar la hora real del cierre.
+    const result = await pool.query(
+      `UPDATE solicitud
+       SET descripcion_trabajo = $1
+       WHERE id = $2 AND categoria = $3 AND estado = 'terminada' AND atendido_por = $4
+       RETURNING id, descripcion_trabajo`,
+      [texto, id, categoria, usuarioId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'La solicitud no existe, no está terminada o fue atendida por otro usuario',
+      });
+    }
+
+    res.json({ mensaje: 'Descripción guardada', solicitud: result.rows[0] });
+  } catch (err) {
+    console.error('Error al guardar descripción del trabajo:', err);
     res.status(500).json({ error: err.message });
   }
 });

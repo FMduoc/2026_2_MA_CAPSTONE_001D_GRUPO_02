@@ -13,6 +13,9 @@ import {
   etiquetaUrgencia,
 } from '../services/soporte';
 
+// Debe coincidir con el límite del backend y de la base de datos
+const MAX_DESCRIPCION_TRABAJO = 500;
+
 @Component({
   selector: 'app-atencion-soporte',
   templateUrl: './atencion-soporte.page.html',
@@ -112,13 +115,11 @@ export class AtencionSoportePage {
     this.terminandoId = id;
     this.cdr.detectChanges();
 
+    let cerrada = false;
+
     try {
       await this.soporteService.terminar(id, resultado.codigo);
-
-      await this.mostrarAlerta(
-        'Solicitud cerrada',
-        'La solicitud quedó marcada como terminada.'
-      );
+      cerrada = true;
     } catch (err: any) {
       console.error('Error al terminar solicitud:', err);
 
@@ -138,7 +139,87 @@ export class AtencionSoportePage {
 
     // Se recarga siempre: si falló, puede que otro usuario ya la haya modificado
     await this.cargar();
+
+    // 4. Solicitud cerrada: se ofrece (de forma opcional) describir el trabajo realizado
+    if (cerrada) {
+      await this.mostrarAlerta(
+        'Solicitud cerrada',
+        'La solicitud quedó marcada como terminada.'
+      );
+      await this.pedirDescripcionTrabajo(id);
+    }
   }
+
+  // =====================================================
+  // DESCRIPCIÓN DEL TRABAJO REALIZADO (opcional)
+  // =====================================================
+
+  private async pedirDescripcionTrabajo(id: number) {
+    let textoInicial = '';
+
+    while (true) {
+      const alerta = await this.alertController.create({
+        header: 'Descripción del trabajo',
+        message: 'Opcional: cuenta brevemente qué se hizo para resolver la solicitud.',
+        inputs: [
+          {
+            name: 'texto',
+            type: 'textarea',
+            value: textoInicial,
+            placeholder: 'Ej. Se reemplazó el cable HDMI del proyector',
+            attributes: { maxlength: MAX_DESCRIPCION_TRABAJO, rows: 4 },
+          },
+        ],
+        buttons: [
+          { text: 'Omitir', role: 'cancel' },
+          { text: 'Guardar', role: 'confirm' },
+        ],
+        backdropDismiss: false,
+      });
+
+      await alerta.present();
+      const { role, data } = await alerta.onDidDismiss();
+
+      const texto = String(data?.values?.texto ?? '').trim();
+      if (role !== 'confirm' || !texto) return; // omitió o dejó el campo vacío
+
+      try {
+        await this.soporteService.guardarDescripcionTrabajo(id, texto);
+        await this.mostrarAlerta(
+          'Descripción guardada',
+          'Quedó registrada junto a la solicitud.'
+        );
+        await this.cargar();
+        return;
+      } catch (err) {
+        console.error('Error al guardar la descripción del trabajo:', err);
+        textoInicial = texto; // se conserva lo escrito por si reintenta
+
+        if (!(await this.confirmarReintentoDescripcion())) return;
+      }
+    }
+  }
+
+  private async confirmarReintentoDescripcion(): Promise<boolean> {
+    const alerta = await this.alertController.create({
+      header: 'No se pudo guardar',
+      message:
+        'La solicitud ya quedó cerrada, pero la descripción no se guardó. ¿Quieres intentarlo de nuevo?',
+      buttons: [
+        { text: 'Omitir', role: 'cancel' },
+        { text: 'Reintentar', role: 'confirm' },
+      ],
+      backdropDismiss: false,
+    });
+
+    await alerta.present();
+    const { role } = await alerta.onDidDismiss();
+    return role === 'confirm';
+  }
+
+  // =====================================================
+  // ALERTAS
+  // =====================================================
 
   private async confirmarEscaneo(): Promise<boolean> {
     const alerta = await this.alertController.create({

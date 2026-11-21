@@ -1,3 +1,4 @@
+//services/soporte.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -13,6 +14,7 @@ export interface SolicitudSoporte {
   urgencia: string;
   estado: string;
   atendido_por: number | null;
+  descripcion_trabajo?: string | null;
   fecha_creacion: string;
   fecha_actualizacion: string | null;
 }
@@ -54,13 +56,24 @@ export class SoporteService {
     return data || [];
   }
 
-async terminar(id: number, codigoQr: string): Promise<void> {
-  await firstValueFrom(
-    this.http.patch(
-      `${this.apiUrl}/solicitudes/${id}/terminar`,
-      { codigo_qr: codigoQr },
-      { headers: await this.headers() }
-    )
-  );
-}
+  async terminar(id: number, codigoQr: string): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.apiUrl}/solicitudes/${id}/terminar`,
+        { codigo_qr: codigoQr },
+        { headers: await this.headers() }
+      )
+    );
+  }
+
+  // Solo se puede guardar sobre una solicitud ya terminada por este mismo usuario
+  async guardarDescripcionTrabajo(id: number, descripcionTrabajo: string): Promise<void> {
+    await firstValueFrom(
+      this.http.patch(
+        `${this.apiUrl}/solicitudes/${id}/descripcion-trabajo`,
+        { descripcion_trabajo: descripcionTrabajo },
+        { headers: await this.headers() }
+      )
+    );
+  }
 }
