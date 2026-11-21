@@ -47,6 +47,17 @@ export class SolicitudService {
       })
     );
   }
+    // Cancela una petición propia que aún no está terminada
+  async cancelar(id: number): Promise<{ mensaje: string; solicitud: Solicitud }> {
+    const token = await this.authService.getToken();
+    return firstValueFrom(
+      this.http.patch<{ mensaje: string; solicitud: Solicitud }>(
+        `${this.apiUrl}/${id}/cancelar`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+    );
+  }
 
   // Nuevo: marca como "en proceso" y asigna el usuario responsable
   async atender(id: number): Promise<{ mensaje: string; solicitud: Solicitud }> {
@@ -81,5 +92,6 @@ async consultarCobertura(categoria: string): Promise<{ categoria: string; hayDis
       )
     );
   }
+
 }
 

@@ -312,6 +312,18 @@ router.patch('/solicitudes/:id/terminar', verificarToken, async (req, res) => {
     );
 
     const s = actual.rows[0];
+        // La solicitud fue cancelada por el solicitante mientras se atendía
+    if (
+      s &&
+      s.categoria === categoria &&
+      s.estado === 'cancelada' &&
+      Number(s.atendido_por) === Number(usuarioId)
+    ) {
+      return res.status(409).json({
+        error: 'Esta solicitud fue cancelada por el solicitante.',
+        codigo: 'SOLICITUD_CANCELADA',
+      });
+    }
 
     if (
       !s ||
