@@ -1,4 +1,6 @@
 const express = require('express');
+// Configuración para emailService.js
+require('dotenv').config();
 const cors = require('cors');
 const pool = require('./db');
 
