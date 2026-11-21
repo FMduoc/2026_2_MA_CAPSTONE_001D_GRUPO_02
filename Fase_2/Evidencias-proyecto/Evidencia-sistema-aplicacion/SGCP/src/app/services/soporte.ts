@@ -56,6 +56,16 @@ export class SoporteService {
     return data || [];
   }
 
+  // Estado actual de una solicitud que este usuario está atendiendo
+  async consultarEstado(id: number): Promise<{ id: number; estado: string }> {
+    return firstValueFrom(
+      this.http.get<{ id: number; estado: string }>(
+        `${this.apiUrl}/solicitudes/${id}/estado`,
+        { headers: await this.headers() }
+      )
+    );
+  }
+
   async terminar(id: number, codigoQr: string): Promise<void> {
     await firstValueFrom(
       this.http.patch(
