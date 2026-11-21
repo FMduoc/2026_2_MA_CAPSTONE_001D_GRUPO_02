@@ -416,6 +416,16 @@
   line-height: 1.45;
 }
 
+.texto-trabajo {
+  white-space: pre-line; // respeta los saltos de línea que escribió el soporte
+
+  &.sin-descripcion {
+    color: #6b7280;
+    font-style: italic;
+    font-weight: 600;
+  }
+}
+
 
 /* =========================================
    ACCIONES
@@ -660,6 +670,7 @@
 /* ============================
    SECCIONES ACTIVAS / HISTORIAL
 ============================ */
+
 .section-block { margin-top: 34px; }
 
 .history-section {

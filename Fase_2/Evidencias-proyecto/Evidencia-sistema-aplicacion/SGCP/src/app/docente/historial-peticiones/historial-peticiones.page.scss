@@ -151,6 +151,43 @@ ion-header {
     color: #9ca3af;
   }
 }
+.estado-cancelada {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.trabajo-realizado {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f4f6fb;
+  border-left: 4px solid #ffc20e;
+  border-radius: 8px;
+
+  .trabajo-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #1f2937;
+    white-space: pre-line;
+
+    &.sin-descripcion {
+      color: #6b7280;
+      font-style: italic;
+    }
+  }
+}
+
+.btn-cancelar-peticion {
+  margin-top: 14px;
+  --border-radius: 12px;
+  font-weight: 700;
+}
 
 /* =========================================
    ESTADO DE LA SOLICITUD
