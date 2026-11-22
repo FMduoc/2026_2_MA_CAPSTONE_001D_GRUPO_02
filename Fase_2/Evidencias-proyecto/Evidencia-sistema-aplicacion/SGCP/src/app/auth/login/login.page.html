@@ -99,6 +99,46 @@
 
       </div>
 
+      <!-- OPCIÓN DE VERIFICACIÓN -->
+      <div
+        class="verification-box"
+        *ngIf="emailNoVerificado">
+
+        <h3>Verifica tu correo electrónico</h3>
+
+        <p>
+          Para acceder a AsisteQR, primero debes confirmar tu dirección
+          de correo electrónico.
+        </p>
+
+        <p>
+          Revisa tu bandeja de entrada y también la carpeta de spam.
+        </p>
+
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="primary"
+          (click)="reenviarVerificacion()"
+          [disabled]="reenviando || !email.trim()">
+
+          {{ reenviando
+            ? 'Enviando correo...'
+            : 'Reenviar correo de verificación' }}
+
+        </ion-button>
+
+      </div>
+
+      <!-- CONFIRMACIÓN DEL REENVÍO -->
+      <div
+        class="success-box"
+        *ngIf="mensajeReenvio">
+
+        {{ mensajeReenvio }}
+
+      </div>
+
 
       <!-- BOTÓN LOGIN -->
       <ion-button

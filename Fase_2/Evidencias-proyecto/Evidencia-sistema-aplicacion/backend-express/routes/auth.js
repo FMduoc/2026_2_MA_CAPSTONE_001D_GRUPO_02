@@ -94,6 +94,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Comprobación de si ya existe un usuario con el e-mail o RUT ingresado.
+    /*
     const existente = await pool.query(
       `SELECT id
        FROM usuario
@@ -104,6 +105,30 @@ router.post('/register', async (req, res) => {
     if (existente.rows.length > 0) {
       return res.status(409).json({
         error: 'Ese email ya está registrado'
+      });
+    }
+    */
+    const emailExistente = await pool.query(
+      'SELECT id FROM usuario WHERE email = $1',
+      [email]
+    );
+
+    if (emailExistente.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Ese email ya está registrado',
+        codigo: 'EMAIL_DUPLICADO'
+      });
+    }
+
+    const rutExistente = await pool.query(
+      'SELECT id FROM usuario WHERE rut = $1',
+      [rutNormalizado]
+    );
+
+    if (rutExistente.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Ese RUT ya está registrado',
+        codigo: 'RUT_DUPLICADO'
       });
     }
 

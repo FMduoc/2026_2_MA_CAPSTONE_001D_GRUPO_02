@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+
+import { Component, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular/lazy';
-import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-register',
@@ -29,41 +31,25 @@ export class RegisterPage {
   contrasena = '';
   confirmarContrasena = '';
 
-  // Lo que el usuario selecciona visualmente
   tipoCuenta = 'solicitante';
-
-  // Área cuando selecciona Personal
   areaSoporte = 'staff';
 
   error = '';
   cargando = false;
 
+  // Estado de la pantalla de confirmación
+  registroExitoso = false;
+  correoEnviado = true;
 
   tiposCuenta = [
-    {
-      valor: 'solicitante',
-      etiqueta: 'Docente'
-    },
-    {
-      valor: 'staff',
-      etiqueta: 'Personal'
-    }
+    { valor: 'solicitante', etiqueta: 'Docente' },
+    { valor: 'staff', etiqueta: 'Personal' }
   ];
 
-
   areasSoporte = [
-    {
-      valor: 'tecnico',
-      etiqueta: 'Servicio técnico'
-    },
-    {
-      valor: 'enfermeria',
-      etiqueta: 'Enfermería'
-    },
-    {
-      valor: 'limpieza',
-      etiqueta: 'Limpieza'
-    }
+    { valor: 'tecnico', etiqueta: 'Servicio técnico' },
+    { valor: 'enfermeria', etiqueta: 'Enfermería' },
+    { valor: 'limpieza', etiqueta: 'Limpieza' }
   ];
 
   // Normalización de RUT.
@@ -88,8 +74,7 @@ export class RegisterPage {
 
     for (let i = cuerpo.length - 1; i >= 0; i--) {
       suma += Number(cuerpo[i]) * multiplicador;
-      multiplicador =
-        multiplicador === 7 ? 2 : multiplicador + 1;
+      multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
     }
 
     const resto = 11 - (suma % 11);
@@ -102,6 +87,7 @@ export class RegisterPage {
     } else {
       digitoCalculado = String(resto);
     }
+
     return digitoCalculado === digitoIngresado;
   }
 
@@ -111,31 +97,24 @@ export class RegisterPage {
     return digitos.length >= 8 && digitos.length <= 15;
   }
 
-
   constructor(
     private authService: AuthService,
-    private router: Router
+    // Utilizados para cambiar los contenidos de la página de forma dinámica.
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {}
 
-
   registrarse() {
+    if (this.cargando || this.registroExitoso) return;
 
     this.error = '';
 
-    const nombre =
-      this.nombre.trim();
-
-    const apellido =
-      this.apellido.trim();
-
-    const email =
-      this.email
-        .trim()
-        .toLowerCase();
+    const nombre = this.nombre.trim();
+    const apellido = this.apellido.trim();
+    const email = this.email.trim().toLowerCase();
 
     const rutNormalizado = this.normalizarRut(this.rut);
     const telefono = this.telefono.trim();
-
 
     if (
       !nombre ||
@@ -147,9 +126,7 @@ export class RegisterPage {
       !this.confirmarContrasena ||
       !this.tipoCuenta
     ) {
-
-      this.error =
-        'Todos los campos son obligatorios';
+      this.error = 'Todos los campos son obligatorios';
       return;
     }
 
@@ -163,107 +140,84 @@ export class RegisterPage {
       return;
     }
 
-    if (
-      this.tipoCuenta === 'staff' &&
-      !this.areaSoporte
-    ) {
-
-      this.error =
-        'Debes seleccionar un área de soporte';
-
+    if (this.tipoCuenta === 'staff' && !this.areaSoporte) {
+      this.error = 'Debes seleccionar un área de soporte';
       return;
-
     }
 
-
-    if (
-      this.contrasena !==
-      this.confirmarContrasena
-    ) {
-
-      this.error =
-        'Las contraseñas no coinciden';
-
+    if (this.contrasena !== this.confirmarContrasena) {
+      this.error = 'Las contraseñas no coinciden';
       return;
-
     }
-
 
     if (this.contrasena.length < 8) {
-
-      this.error =
-        'La contraseña debe tener al menos 8 caracteres';
-
+      this.error = 'La contraseña debe tener al menos 8 caracteres';
       return;
-
     }
 
-
-    // ==========================================
-    // DEFINIR ROL REAL PARA EL BACKEND
-    // ==========================================
-
+    // Definir rol real para el backend.
     let rolBackend = 'solicitante';
 
-
     if (this.tipoCuenta === 'staff') {
-
-      rolBackend =
-        this.areaSoporte;
-
+      rolBackend = this.areaSoporte;
     }
-
 
     this.cargando = true;
 
-
-    this.authService
-      .register({
-
-        nombre,
-        apellido,
-        email,
-
-        rut: rutNormalizado,
-        telefono,
-
-        contrasena:
-          this.contrasena,
-
-        rol:
-          rolBackend
-
+    this.authService.register({
+      nombre,
+      apellido,
+      email,
+      rut: rutNormalizado,
+      telefono,
+      contrasena: this.contrasena,
+      rol: rolBackend
+    })
+    .pipe(
+      finalize(() => {
+        this.ngZone.run(() => {
+          this.cargando = false;
+          this.cdr.detectChanges();
+        });
       })
-      .subscribe({
+    )
+    .subscribe({
+      next: (respuesta: any) => {
+        this.ngZone.run(() => {
+          this.correoEnviado = respuesta?.correoEnviado !== false;
+          this.registroExitoso = true;
+          this.error = '';
 
-        next: () => {
+          // Actualización inmediata de la pantalla.
+          this.cdr.detectChanges();
+        });
+      },
 
-          this.cargando = false;
+      error: (err) => {
+        console.error('Error al registrar usuario:', err);
 
-          this.router.navigate(
-            ['/login'],
-            {
-              queryParams: {
-                registrado: 'true'
-              }
-            }
-          );
+        this.ngZone.run(() => {
+          const mensaje =
+            typeof err.error === 'string'
+              ? err.error
+              : err.error?.error || err.error?.message;
 
-        },
+          if (err.error?.codigo === 'EMAIL_DUPLICADO') {
+            this.error = 'Ese email ya está registrado';
+          } else if (err.error?.codigo === 'RUT_DUPLICADO') {
+            this.error = 'Ese RUT ya está registrado';
+          } else if (err.status === 0) {
+            this.error = 'No se pudo conectar con el servidor. Inténtalo nuevamente.';
+          } else {
+            this.error =
+              err.error?.error ||
+              'No se pudo completar el registro. Inténtalo nuevamente.';
+          }
 
-
-        error: (err) => {
-
-          this.cargando = false;
-
-          this.error =
-            err.error?.error ||
-            'No se pudo completar el registro';
-
-        }
-
-      });
-
+          // Actualización inmediata del mensaje de error.
+          this.cdr.detectChanges();
+        });
+      }
+    });
   }
-
 }

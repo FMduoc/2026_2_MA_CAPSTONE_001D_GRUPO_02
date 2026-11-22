@@ -24,260 +24,307 @@
 
     <!-- FORMULARIO -->
     <section class="register-card">
+      <ng-container *ngIf="!registroExitoso; else confirmacionRegistro">
 
-      <div class="card-header">
+        <div class="card-header">
 
-        <div class="card-heading">
+          <div class="card-heading">
 
-          <span class="eyebrow">
-            NUEVA CUENTA
-          </span>
+            <span class="eyebrow">
+              NUEVA CUENTA
+            </span>
 
-          <h2>
-            Registro de usuario
-          </h2>
+            <h2>
+              Registro de usuario
+            </h2>
 
-          <p>
-            Ingresa tus datos para comenzar a utilizar la plataforma.
-          </p>
+            <p>
+              Ingresa tus datos para comenzar a utilizar la plataforma.
+            </p>
 
-        </div>
+          </div>
 
-        <div class="card-accent"></div>
-
-      </div>
-
-
-      <div class="form-grid">
-
-        <!-- ====================================== -->
-        <!-- NOMBRE -->
-        <!-- ====================================== -->
-
-        <div class="field-group">
-
-          <span class="field-label">
-            Nombre
-          </span>
-
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            placeholder="Ej. Álvaro"
-            [(ngModel)]="nombre">
-          </ion-input>
+          <div class="card-accent"></div>
 
         </div>
 
 
+        <div class="form-grid">
+
+          <!-- ====================================== -->
+          <!-- NOMBRE -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              Nombre
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              placeholder="Ej. Álvaro"
+              [(ngModel)]="nombre">
+            </ion-input>
+
+          </div>
+
+
+          <!-- ====================================== -->
+          <!-- APELLIDO -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              Apellido
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              placeholder="Ej. Araya"
+              [(ngModel)]="apellido">
+            </ion-input>
+
+          </div>
+
+
+          <!-- ====================================== -->
+          <!-- CORREO -->
+          <!-- ====================================== -->
+
+          <div class="field-group full-width">
+
+            <span class="field-label">
+              Correo electrónico
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              type="email"
+              placeholder="nombre@correo.com"
+              [(ngModel)]="email">
+            </ion-input>
+
+          </div>
+
+          <!-- ====================================== -->
+          <!-- RUT -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              RUT
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              type="text"
+              placeholder="Ej. 12.345.678-9"
+              maxlength="12"
+              [(ngModel)]="rut">
+            </ion-input>
+
+          </div>
+
+
+          <!-- ====================================== -->
+          <!-- TELÉFONO -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              Teléfono
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              type="tel"
+              placeholder="Ej. +56 9 1234 5678"
+              maxlength="20"
+              [(ngModel)]="telefono">
+            </ion-input>
+
+          </div>
+
+
+          <!-- ====================================== -->
+          <!-- TIPO DE CUENTA -->
+          <!-- ====================================== -->
+
+          <div class="field-group full-width">
+
+            <span class="field-label">
+              Tipo de cuenta
+            </span>
+
+            <select
+              class="premium-select"
+              [(ngModel)]="tipoCuenta">
+
+              <option
+                *ngFor="let tipo of tiposCuenta"
+                [value]="tipo.valor">
+
+                {{ tipo.etiqueta }}
+
+              </option>
+
+            </select>
+
+          </div>
+
+
+
+          <!-- ====================================== -->
+          <!-- CONTRASEÑA -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              Contraseña
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              type="password"
+              placeholder="Mínimo 8 caracteres"
+              [(ngModel)]="contrasena">
+            </ion-input>
+
+          </div>
+
+
+          <!-- ====================================== -->
+          <!-- CONFIRMAR CONTRASEÑA -->
+          <!-- ====================================== -->
+
+          <div class="field-group">
+
+            <span class="field-label">
+              Confirmar contraseña
+            </span>
+
+            <ion-input
+              class="premium-input"
+              fill="outline"
+              type="password"
+              placeholder="Repite tu contraseña"
+              [(ngModel)]="confirmarContrasena">
+            </ion-input>
+
+          </div>
+
+        </div>
+
+
         <!-- ====================================== -->
-        <!-- APELLIDO -->
+        <!-- ERROR -->
         <!-- ====================================== -->
 
-        <div class="field-group">
+        <div
+          class="error-box"
+          *ngIf="error">
 
-          <span class="field-label">
-            Apellido
-          </span>
-
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            placeholder="Ej. Araya"
-            [(ngModel)]="apellido">
-          </ion-input>
+          {{ error }}
 
         </div>
 
 
         <!-- ====================================== -->
-        <!-- CORREO -->
+        <!-- BOTÓN REGISTRO -->
         <!-- ====================================== -->
 
-        <div class="field-group full-width">
+        <ion-button
+          expand="block"
+          class="register-button"
+          (click)="registrarse()"
+          [disabled]="cargando">
 
-          <span class="field-label">
-            Correo electrónico
-          </span>
+          {{ cargando ? 'Creando cuenta...' : 'Crear cuenta' }}
 
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            type="email"
-            placeholder="nombre@correo.com"
-            [(ngModel)]="email">
-          </ion-input>
+        </ion-button>
+
+
+        <!-- ====================================== -->
+        <!-- IR AL LOGIN -->
+        <!-- ====================================== -->
+
+        <div class="login-section">
+
+          <div class="separator">
+
+            <span></span>
+
+            <p>
+              ¿Ya tienes cuenta?
+            </p>
+
+            <span></span>
+
+          </div>
+
+          <a routerLink="/login">
+            Iniciar sesión
+          </a>
 
         </div>
+      </ng-container>
+      <ng-template #confirmacionRegistro>
+        <div class="confirmation-box">
+          <div class="confirmation-icon">
+            <ion-icon name="mail-unread-outline"></ion-icon>
+          </div>
 
-        <!-- ====================================== -->
-        <!-- RUT -->
-        <!-- ====================================== -->
+          <h2>¡Registro completado!</h2>
 
-        <div class="field-group">
+          <ng-container *ngIf="correoEnviado; else errorEnvioCorreo">
+            <p>
+              Tu cuenta ha sido creada correctamente.
+              Hemos enviado un correo de verificación a:
+            </p>
 
-          <span class="field-label">
-            RUT
-          </span>
+            <strong>{{ email.trim().toLowerCase() }}</strong>
 
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            type="text"
-            placeholder="Ej. 12.345.678-9"
-            maxlength="12"
-            [(ngModel)]="rut">
-          </ion-input>
+            <p>
+              Revisa tu bandeja de entrada y sigue el enlace
+              que encontrarás en el mensaje para verificar tu cuenta.
+            </p>
 
+            <p class="confirmation-note">
+              Si no encuentras el correo, revisa también la carpeta de spam.
+            </p>
+          </ng-container>
+
+          <ng-template #errorEnvioCorreo>
+            <p>
+              Tu cuenta fue creada, pero no pudimos enviar el correo
+              de verificación en este momento.
+            </p>
+
+            <p>
+              Puedes volver a la pantalla de inicio de sesión e intentar
+              reenviar el correo de verificación.
+            </p>
+          </ng-template>
+
+          <ion-button
+            expand="block"
+            class="register-button"
+            routerLink="/login">
+            Ir a iniciar sesión
+          </ion-button>
         </div>
-
-
-        <!-- ====================================== -->
-        <!-- TELÉFONO -->
-        <!-- ====================================== -->
-
-        <div class="field-group">
-
-          <span class="field-label">
-            Teléfono
-          </span>
-
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            type="tel"
-            placeholder="Ej. +56 9 1234 5678"
-            maxlength="20"
-            [(ngModel)]="telefono">
-          </ion-input>
-
-        </div>
-
-
-        <!-- ====================================== -->
-        <!-- TIPO DE CUENTA -->
-        <!-- ====================================== -->
-
-        <div class="field-group full-width">
-
-          <span class="field-label">
-            Tipo de cuenta
-          </span>
-
-          <select
-            class="premium-select"
-            [(ngModel)]="tipoCuenta">
-
-            <option
-              *ngFor="let tipo of tiposCuenta"
-              [value]="tipo.valor">
-
-              {{ tipo.etiqueta }}
-
-            </option>
-
-          </select>
-
-        </div>
-
-
-
-        <!-- ====================================== -->
-        <!-- CONTRASEÑA -->
-        <!-- ====================================== -->
-
-        <div class="field-group">
-
-          <span class="field-label">
-            Contraseña
-          </span>
-
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            type="password"
-            placeholder="Mínimo 8 caracteres"
-            [(ngModel)]="contrasena">
-          </ion-input>
-
-        </div>
-
-
-        <!-- ====================================== -->
-        <!-- CONFIRMAR CONTRASEÑA -->
-        <!-- ====================================== -->
-
-        <div class="field-group">
-
-          <span class="field-label">
-            Confirmar contraseña
-          </span>
-
-          <ion-input
-            class="premium-input"
-            fill="outline"
-            type="password"
-            placeholder="Repite tu contraseña"
-            [(ngModel)]="confirmarContrasena">
-          </ion-input>
-
-        </div>
-
-      </div>
-
-
-      <!-- ====================================== -->
-      <!-- ERROR -->
-      <!-- ====================================== -->
-
-      <div
-        class="error-box"
-        *ngIf="error">
-
-        {{ error }}
-
-      </div>
-
-
-      <!-- ====================================== -->
-      <!-- BOTÓN REGISTRO -->
-      <!-- ====================================== -->
-
-      <ion-button
-        expand="block"
-        class="register-button"
-        (click)="registrarse()"
-        [disabled]="cargando">
-
-        {{ cargando ? 'Creando cuenta...' : 'Crear cuenta' }}
-
-      </ion-button>
-
-
-      <!-- ====================================== -->
-      <!-- IR AL LOGIN -->
-      <!-- ====================================== -->
-
-      <div class="login-section">
-
-        <div class="separator">
-
-          <span></span>
-
-          <p>
-            ¿Ya tienes cuenta?
-          </p>
-
-          <span></span>
-
-        </div>
-
-        <a routerLink="/login">
-          Iniciar sesión
-        </a>
-
-      </div>
-
+      </ng-template>
     </section>
 
   </div>

@@ -13,6 +13,7 @@ interface Usuario {
   telefono: string;
   rol: string;
   disponible?: boolean;
+  aprobado: boolean;
 }
 
 interface LoginResponse {
@@ -52,6 +53,14 @@ export class AuthService {
     return this.http.post(
       `${this.apiUrl}/register`,
       datos
+    );
+  }
+
+  // Reenvío de correo de verificación.
+  reenviarVerificacion(email: string): Observable<{ mensaje: string }> {
+    return this.http.post<{ mensaje: string }>(
+      `${this.apiUrl}/reenviar-verificacion`,
+      { email }
     );
   }
 

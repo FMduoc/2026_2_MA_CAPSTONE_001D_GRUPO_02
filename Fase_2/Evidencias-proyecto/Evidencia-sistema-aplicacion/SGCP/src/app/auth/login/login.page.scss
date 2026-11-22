@@ -687,4 +687,43 @@
 
   }
 
+  
+.verification-box {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid #f0d58c;
+  border-radius: 10px;
+  background: #fffaf0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #8a5a00;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #66532f;
+  }
+
+  ion-button {
+    margin-top: 12px;
+  }
+}
+
+.success-box {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #a7dfb5;
+  border-radius: 10px;
+  background: #effaf1;
+  color: #176b35;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
 }
