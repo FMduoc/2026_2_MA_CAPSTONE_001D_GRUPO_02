@@ -34,7 +34,6 @@ const opciones = [
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [usuario] = useState(() => authService.getUsuario()); // Guarda información de localStorage en const usuario
 
   const cerrarSesion = () => {
     authService.logout();
@@ -53,36 +52,13 @@ export function Sidebar() {
         },
       }}
     >
-      <Toolbar sx={{ justifyContent: 'center' }}>
-        <Box
-          component="img"
-          src={logo}
-          alt="AsisteQR Admin"
-          sx={{ maxWidth: '100%', maxHeight: 40, objectFit: 'contain' }}
-        />
+      <Toolbar>
+        <Typography variant="h6" noWrap>
+          AsisteQR Admin
+        </Typography>
       </Toolbar>
 
-      {usuario && (
-        <Box
-          sx={{
-            m: 0,
-            p: 2,
-            borderRadius: 0,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-          }}
-        >
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {usuario.nombre} {usuario.apellido}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ opacity: 0.85, wordBreak: 'break-all' }}
-          >
-            {usuario.email}
-          </Typography>
-        </Box>
-      )}
+      <Divider />
 
       <List>
         {opciones.map((opcion) => (

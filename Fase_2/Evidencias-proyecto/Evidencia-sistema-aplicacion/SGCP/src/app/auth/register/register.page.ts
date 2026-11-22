@@ -107,6 +107,9 @@ export class RegisterPage {
   registrarse() {
     if (this.cargando || this.registroExitoso) return;
 
+    // Evita registros duplicados por doble toque
+    if (this.cargando) return;
+
     this.error = '';
 
     const nombre = this.nombre.trim();
@@ -163,6 +166,7 @@ export class RegisterPage {
     }
 
     this.cargando = true;
+    this.cdr.detectChanges();
 
     this.authService.register({
       nombre,

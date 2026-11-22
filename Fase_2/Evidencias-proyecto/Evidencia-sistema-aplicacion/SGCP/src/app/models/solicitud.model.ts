@@ -7,6 +7,7 @@ export interface Solicitud {
   categoria?: string;
   estado?: string;
   atendido_por?: number;
+  descripcion_trabajo?: string | null;
   fecha_creacion?: string;
   fecha_actualizacion?: string;
   sala_nombre?: string;

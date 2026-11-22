@@ -1,4 +1,4 @@
-<!--inicio-soporte.page.html-->
+<!--historial-soporte.page.html-->
 <ion-content class="soporte-page">
 
   <div class="soporte-layout">
@@ -88,6 +88,16 @@
                   {{ solicitud.descripcion }}
                 </strong>
               </div>
+              <div class="info-item full-width">
+                <span>
+                  Trabajo realizado
+                </span>
+                <strong
+                  class="texto-trabajo"
+                  [class.sin-descripcion]="!solicitud.descripcion_trabajo">
+                  {{ solicitud.descripcion_trabajo || 'Descripción no otorgada' }}
+                </strong>
+              </div>              
 
               <div class="info-item">
                 <span>

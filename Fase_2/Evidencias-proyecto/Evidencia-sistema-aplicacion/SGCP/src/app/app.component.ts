@@ -1,5 +1,9 @@
+//app.component.ts
 import { Component } from '@angular/core';
-import { IonApp, IonRouterOutlet} from '@ionic/angular';
+import { Router } from '@angular/router';
+import { IonicModule } from '@ionic/angular/lazy';
+import { App } from '@capacitor/app';
+import { Preferences } from '@capacitor/preferences';
 
 @Component({
   selector: 'app-root',
@@ -9,5 +13,26 @@ import { IonApp, IonRouterOutlet} from '@ionic/angular';
   //imports: [IonApp, IonRouterOutlet]
 })
 export class AppComponent {
-  constructor() {}
+  constructor(private router: Router) {
+    this.escucharResultadoRestaurado();
+  }
+
+  // Android pudo matar la app mientras la cámara estaba abierta.
+  // Capacitor avisa aquí cuando la app renace.
+  // Solo aplica al escáner del docente (escanear-qr), que usa BarcodeScanner.scan().
+  // El escáner de soporte usa un modal con startScan() y no pasa por aquí.
+  private escucharResultadoRestaurado() {
+    App.addListener('appRestoredResult', async (data) => {
+      if (data.pluginId !== 'BarcodeScanner' || data.methodName !== 'scan') return;
+
+      await Preferences.remove({ key: 'escaneo_en_curso' });
+
+      const codigo = data.success ? (data.data as any)?.barcodes?.[0]?.rawValue : null;
+
+      this.router.navigate(['/escanear-qr'], {
+        queryParams: codigo ? { codigoRestaurado: codigo } : { interrumpido: 1 },
+        replaceUrl: true,
+      });
+    });
+  }
 }

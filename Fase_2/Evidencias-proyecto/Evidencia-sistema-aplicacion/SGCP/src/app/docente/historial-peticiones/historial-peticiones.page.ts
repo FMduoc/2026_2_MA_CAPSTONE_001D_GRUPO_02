@@ -1,7 +1,8 @@
-//historial-peticiones.ts
+//historial-peticiones.page.ts
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular/lazy';
+import { AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { SolicitudService } from '../../services/solicitud';
 import { Solicitud } from '../../models/solicitud.model';
@@ -17,6 +18,7 @@ export class HistorialPeticionesPage implements OnInit {
   solicitudes: Solicitud[] = [];
   cargando = true;
   error = '';
+  cancelandoId: number | null = null;
 
   private iconos: Record<string, string> = {
     tecnico: 'construct-outline',
@@ -29,6 +31,7 @@ export class HistorialPeticionesPage implements OnInit {
     pendiente: 'Pendiente',
     atendida: 'En proceso',
     terminada: 'Resuelta',
+    cancelada: 'Cancelada',
   };
 
   private etiquetasCategoria: Record<string, string> = {
@@ -41,7 +44,8 @@ export class HistorialPeticionesPage implements OnInit {
   constructor(
     private solicitudService: SolicitudService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private alertController: AlertController
   ) {}
 
   async ngOnInit() {
@@ -71,6 +75,66 @@ export class HistorialPeticionesPage implements OnInit {
 
   etiquetaEstado(estado?: string): string {
     return this.etiquetasEstado[estado ?? ''] || estado || '';
+  }
+
+  // =====================================================
+  // CANCELAR PETICIÓN (solo si aún no está terminada)
+  // =====================================================
+
+  puedeCancelar(estado?: string): boolean {
+    return estado === 'pendiente' || estado === 'atendida';
+  }
+
+  async cancelar(s: Solicitud) {
+    if (this.cancelandoId !== null || s.id == null) return;
+
+    const enProceso = s.estado === 'atendida';
+
+    const confirmacion = await this.alertController.create({
+      header: 'Cancelar petición',
+      message: enProceso
+        ? 'El personal ya está atendiendo esta petición. Si la cancelas, se detendrá la atención. ¿Quieres continuar?'
+        : '¿Seguro que quieres cancelar esta petición?',
+      buttons: [
+        { text: 'No, volver', role: 'cancel' },
+        { text: 'Sí, cancelar', role: 'confirm' },
+      ],
+      backdropDismiss: false,
+    });
+
+    await confirmacion.present();
+    const { role } = await confirmacion.onDidDismiss();
+    if (role !== 'confirm') return;
+
+    this.cancelandoId = s.id;
+    this.cdr.detectChanges();
+
+    try {
+      await this.solicitudService.cancelar(s.id);
+    } catch (err: any) {
+      console.error('Error al cancelar la petición:', err);
+      await this.mostrarAlerta(
+        'No se pudo cancelar',
+        err.error?.error || 'Intenta de nuevo en unos momentos.'
+      );
+    } finally {
+      this.cancelandoId = null;
+      this.cdr.detectChanges();
+    }
+
+    // Se recarga siempre: si falló, puede que el estado haya cambiado mientras tanto
+    await this.cargarSolicitudes();
+  }
+
+  private async mostrarAlerta(titulo: string, mensaje: string) {
+    const alerta = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido'],
+    });
+
+    await alerta.present();
+    await alerta.onDidDismiss();
   }
 
   volver() {

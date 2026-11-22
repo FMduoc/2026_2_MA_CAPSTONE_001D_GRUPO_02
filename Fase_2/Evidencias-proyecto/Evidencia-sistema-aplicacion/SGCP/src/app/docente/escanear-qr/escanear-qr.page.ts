@@ -2,11 +2,17 @@ import { Component, ViewChild, ElementRef, OnDestroy, NgZone, ChangeDetectorRef 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular/lazy';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning';
-import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
+// Solo el tipo: no carga la librería en tiempo de ejecución
+import type { IScannerControls } from '@zxing/browser';
 import { SalaService } from '../../services/sala';
+
+// Marca que se guarda antes de abrir la cámara. Si Android cierra la app
+// durante el escaneo, la marca sigue ahí y el login devuelve al usuario aquí.
+const CLAVE_ESCANEO = 'escaneo_en_curso';
 
 @Component({
   selector: 'app-escanear-qr',
@@ -23,16 +29,54 @@ export class EscanearQrPage implements OnDestroy {
   escaneandoWeb = false;
   codigoManual = '';
 
-  private procesando = false; // evita resolver dos veces el mismo escaneo
-  private codeReader = new BrowserQRCodeReader();
+  private procesando = false;
   private controlsWeb?: IScannerControls;
 
   constructor(
     private salaService: SalaService,
     private router: Router,
+    private route: ActivatedRoute,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef
   ) {}
+
+  // Ionic conserva esta pantalla en memoria al navegar al detalle.
+  // Cada vez que se vuelve a mostrar, partimos de un estado limpio.
+  ionViewWillEnter() {
+    this.controlsWeb?.stop();
+    this.buscando = false;
+    this.procesando = false;
+    this.escaneandoWeb = false;
+    this.error = '';
+    this.codigoManual = '';
+
+    const params = this.route.snapshot.queryParamMap;
+
+    // 1) El escaneo terminó bien, pero la app se reinició: procesar el código recuperado
+    const codigoRestaurado = params.get('codigoRestaurado');
+    if (codigoRestaurado) {
+      this.limpiarQueryParams();
+      this.resolverCodigo(codigoRestaurado);
+      return;
+    }
+
+    // 2) La app se reinició mientras la cámara estaba abierta
+    if (params.get('interrumpido')) {
+      this.error = 'El escaneo se interrumpió porque el celular cerró la app. Intenta de nuevo.';
+      this.limpiarQueryParams();
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  // Limpia los parámetros para que no reaparezcan al volver desde otra pantalla
+  private limpiarQueryParams() {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      replaceUrl: true,
+    });
+  }
 
   async escanear() {
     if (this.procesando) return;
@@ -56,13 +100,15 @@ export class EscanearQrPage implements OnDestroy {
       return;
     }
 
+    // Se guarda antes de abrir la cámara; si la app muere, queda registrada
+    await Preferences.set({ key: CLAVE_ESCANEO, value: String(Date.now()) });
+
     try {
       const { barcodes } = await BarcodeScanner.scan({
         formats: [BarcodeFormat.QrCode],
       });
       const valor = barcodes[0]?.rawValue;
 
-      // Al volver de la pantalla nativa hay que reentrar a la zona de Angular
       this.ngZone.run(() => {
         if (!valor) {
           this.error = 'No se pudo leer el contenido del código';
@@ -76,6 +122,9 @@ export class EscanearQrPage implements OnDestroy {
         this.error = 'Ocurrió un error al escanear. Intenta de nuevo.';
         this.cdr.detectChanges();
       });
+    } finally {
+      // Si llegamos aquí, la app no murió: ya no hace falta la marca
+      await Preferences.remove({ key: CLAVE_ESCANEO });
     }
   }
 
@@ -87,12 +136,15 @@ export class EscanearQrPage implements OnDestroy {
     return resultado === 'granted';
   }
 
-  // ===== MÉTODO WEB (sin cambios de lógica) =====
+  // ===== MÉTODO WEB =====
   private async escanearConCamaraWeb() {
     this.escaneandoWeb = true;
 
     setTimeout(async () => {
       try {
+        // La librería se descarga solo cuando se escanea desde un navegador
+        const { BrowserQRCodeReader } = await import('@zxing/browser');
+
         const videoInputDevices = await BrowserQRCodeReader.listVideoInputDevices();
 
         if (videoInputDevices.length === 0) {
@@ -114,7 +166,8 @@ export class EscanearQrPage implements OnDestroy {
           },
         };
 
-        this.controlsWeb = await this.codeReader.decodeFromConstraints(
+        const lector = new BrowserQRCodeReader();
+        this.controlsWeb = await lector.decodeFromConstraints(
           constraints,
           this.videoElement!.nativeElement,
           (result) => {
@@ -152,9 +205,11 @@ export class EscanearQrPage implements OnDestroy {
     this.salaService.buscarPorCodigo(codigo).subscribe({
       next: (sala) => {
         this.ngZone.run(() => {
+          // Se limpia el estado antes de navegar, para que no quede pegado al volver
           this.buscando = false;
           this.procesando = false;
-          // Datos en la URL (sobreviven a una recreación del WebView) y en state
+          this.cdr.detectChanges();
+
           this.router.navigate(['/docente/detalle-solicitud'], {
             queryParams: { salaId: sala.id, salaNombre: sala.nombre },
             state: { salaId: sala.id, salaNombre: sala.nombre },
