@@ -1,5 +1,7 @@
 //index.js
 const express = require('express');
+// Configuración para emailService.js
+require('dotenv').config();
 const cors = require('cors');
 const pool = require('./db');
 
@@ -205,6 +207,8 @@ app.get('/api/soporte/cobertura/:categoria', verificarToken, async (req, res) =>
   }
 });
 
+// Detalles de usuario.
+app.use('/api/usuarios', require('./routes/usuarioDetalle'));
 const usuariosRoutes = require('./routes/usuarios');
 app.use('/api/usuarios', usuariosRoutes);
 
