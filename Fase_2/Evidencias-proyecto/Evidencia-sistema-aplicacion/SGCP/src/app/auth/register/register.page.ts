@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+//register.page.ts
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular/lazy';
@@ -114,11 +115,15 @@ export class RegisterPage {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
 
   registrarse() {
+
+    // Evita registros duplicados por doble toque
+    if (this.cargando) return;
 
     this.error = '';
 
@@ -215,6 +220,7 @@ export class RegisterPage {
 
 
     this.cargando = true;
+    this.cdr.detectChanges();
 
 
     this.authService
@@ -239,6 +245,7 @@ export class RegisterPage {
         next: () => {
 
           this.cargando = false;
+          this.cdr.detectChanges();
 
           this.router.navigate(
             ['/login'],
@@ -256,9 +263,18 @@ export class RegisterPage {
 
           this.cargando = false;
 
-          this.error =
-            err.error?.error ||
-            'No se pudo completar el registro';
+          if (err.status === 0) {
+            // El servidor no respondió (sin red, o el servidor de Render está dormido)
+            this.error =
+              'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
+          } else {
+            this.error =
+              err.error?.error ||
+              'No se pudo completar el registro';
+          }
+
+          // Refresca la pantalla: sin esto el botón queda en "Creando cuenta..."
+          this.cdr.detectChanges();
 
         }
 
