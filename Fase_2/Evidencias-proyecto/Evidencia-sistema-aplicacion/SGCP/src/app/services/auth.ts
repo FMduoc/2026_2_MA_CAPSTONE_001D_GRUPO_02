@@ -9,13 +9,25 @@ interface Usuario {
   nombre: string;
   apellido: string;
   email: string;
+  rut: string;
+  telefono: string;
   rol: string;
-  disponible?: boolean; // el backend ya lo envía en el login
+  disponible?: boolean;
 }
 
 interface LoginResponse {
   token: string;
   usuario: Usuario;
+}
+
+interface RegistroUsuario {
+  nombre: string;
+  apellido: string;
+  email: string;
+  rut: string;
+  telefono: string;
+  contrasena: string;
+  rol: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +36,7 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
+  // Login de usuario.
   login(email: string, contrasena: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, { email, contrasena }).pipe(
       switchMap(async (res) => {
@@ -34,32 +47,39 @@ export class AuthService {
     );
   }
 
-
-  register(datos: { nombre: string; apellido: string; email: string; contrasena: string; rol: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, datos);
+  // Registro de usuario.
+  register(datos: RegistroUsuario): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/register`,
+      datos
+    );
   }
 
+  // Logout.
   async logout() {
     await Preferences.remove({ key: 'auth_token' });
     await Preferences.remove({ key: 'usuario' });
   }
 
+  // Obtener tóken.
   async getToken(): Promise<string | null> {
     const { value } = await Preferences.get({ key: 'auth_token' });
     return value;
   }
 
+  // Verificación de autenticación.
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
     return !!token;
   }
 
+  // Obtener usuario almacenado.
   async getUsuario(): Promise<Usuario | null> {
     const { value } = await Preferences.get({ key: 'usuario' });
     return value ? JSON.parse(value) : null;
   }
 
-  // Versión async, ya que Preferences no permite acceso síncrono
+  // Obtener rol. Versión async, ya que Preferences no permite acceso síncrono
   async getRol(): Promise<string | null> {
     const usuario = await this.getUsuario();
     return usuario?.rol ?? null;

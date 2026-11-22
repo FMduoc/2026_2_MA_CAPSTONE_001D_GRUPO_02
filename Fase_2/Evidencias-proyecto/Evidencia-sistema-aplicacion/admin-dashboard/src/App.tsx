@@ -7,6 +7,8 @@ import { ProtectedRoute } from './guards/ProtectedRoute';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { HistorialPage } from './pages/HistorialPage';
 import { KanbanPage } from './pages/KanbanPage';
+import { ReportesPage } from './pages/ReportesPage';
+import { UsuarioDetallePage } from './pages/UsuarioDetallePage';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="/salas" element={<SalasPage />} />
             <Route path="/historial" element={<HistorialPage />} />
             <Route path="/kanban" element={<KanbanPage />} />
+            <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/usuarios/:id" element={<UsuarioDetallePage />} />
           </Route>
         </Route>
 

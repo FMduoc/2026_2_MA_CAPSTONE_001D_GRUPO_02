@@ -1,9 +1,14 @@
-<!--inicio-soporte.page.html-->
+
+<!-- inicio-soporte.page.html -->
+
 <ion-content class="soporte-page">
 
   <div class="soporte-layout">
 
+    <!-- ================================== -->
     <!-- CABECERA -->
+    <!-- ================================== -->
+
     <header class="brand-section">
 
       <img
@@ -28,6 +33,9 @@
         </p>
 
       </div>
+
+      <!-- DISPONIBILIDAD -->
+
       <div class="segmento-disponibilidad">
 
         <button
@@ -56,6 +64,8 @@
 
       </div>
 
+      <!-- CERRAR SESIÓN -->
+
       <ion-button
         fill="outline"
         class="logout-button"
@@ -67,8 +77,10 @@
 
     </header>
 
+    <!-- ================================== -->
+    <!-- CONTENIDO PRINCIPAL -->
+    <!-- ================================== -->
 
-    <!-- CONTENIDO -->
     <section class="soporte-card">
 
       <div class="card-header">
@@ -90,20 +102,45 @@
 
         </div>
 
-        <ion-button
-          fill="outline"
-          class="refresh-button"
-          (click)="cargarSolicitudes()"
-          [disabled]="cargando">
+        <!-- ACCIONES DE SOPORTE -->
 
-          {{ cargando ? 'Actualizando...' : 'Actualizar' }}
+        <div class="acciones-header">
 
-        </ion-button>
+          <ion-button
+            [fill]="cantidadEnAtencion > 0 ? 'solid' : 'outline'"
+            class="refresh-button"
+            (click)="irAAtencion()">
+
+            En atención ({{ cantidadEnAtencion }})
+
+          </ion-button>
+
+          <ion-button
+            class="refresh-button"
+            (click)="irAHistorial()">
+
+            Historial de peticiones
+
+          </ion-button>
+
+          <ion-button
+            fill="outline"
+            class="refresh-button"
+            (click)="cargarSolicitudes()"
+            [disabled]="cargando">
+
+            {{ cargando ? 'Actualizando...' : 'Actualizar' }}
+
+          </ion-button>
+
+        </div>
 
       </div>
 
-
+      <!-- ================================== -->
       <!-- CARGA INICIAL -->
+      <!-- ================================== -->
+
       <div
         class="status-message"
         *ngIf="
@@ -115,8 +152,10 @@
 
       </div>
 
+      <!-- ================================== -->
+      <!-- MENSAJES DE ERROR -->
+      <!-- ================================== -->
 
-      <!-- ERROR -->
       <div
         class="error-box"
         *ngIf="error">
@@ -124,12 +163,23 @@
         {{ error }}
 
       </div>
+
+      <!-- ================================== -->
       <!-- FILTROS -->
+      <!-- ================================== -->
+
       <div class="filtros-bar">
 
+        <!-- FILTRO POR URGENCIA -->
+
         <div class="filtro-grupo">
-          <span class="filtro-label">Urgencia</span>
+
+          <span class="filtro-label">
+            Urgencia
+          </span>
+
           <div class="filtro-chips">
+
             <button
               type="button"
               *ngFor="let op of opcionesUrgenciaFiltro"
@@ -137,14 +187,25 @@
               [class]="'chip-' + op.valor"
               [class.activo]="filtroUrgencia === op.valor"
               (click)="seleccionarFiltroUrgencia(op.valor)">
+
               {{ op.etiqueta }}
+
             </button>
+
           </div>
+
         </div>
 
+        <!-- FILTRO POR SALA -->
+
         <div class="filtro-grupo filtro-sala-grupo">
-          <span class="filtro-label">Sala</span>
+
+          <span class="filtro-label">
+            Sala
+          </span>
+
           <div class="buscador-sala">
+
             <ion-input
               class="input-sala"
               name="buscador-sala-solicitudes"
@@ -154,29 +215,51 @@
               (ionInput)="onBuscarSala($event.detail.value)">
             </ion-input>
 
-            <div class="resultados-sala" *ngIf="busquedaSala && salasFiltradas.length > 0">
+            <!-- RESULTADOS DE BÚSQUEDA -->
+
+            <div
+              class="resultados-sala"
+              *ngIf="busquedaSala && salasFiltradas.length > 0">
+
               <button
                 type="button"
                 *ngFor="let sala of salasFiltradas"
                 class="resultado-item"
                 (click)="seleccionarSala(sala)">
+
                 {{ sala }}
+
               </button>
+
             </div>
 
-            <div class="sin-resultados" *ngIf="busquedaSala && salasFiltradas.length === 0">
+            <!-- SIN RESULTADOS -->
+
+            <div
+              class="sin-resultados"
+              *ngIf="busquedaSala && salasFiltradas.length === 0">
+
               Sin coincidencias
+
             </div>
+
           </div>
+
+          <!-- SALA SELECCIONADA -->
 
           <button
             type="button"
             class="chip-sala-activa"
             *ngIf="filtroSala !== 'todas'"
             (click)="limpiarFiltroSala()">
+
             {{ filtroSala }} ✕
+
           </button>
+
         </div>
+
+        <!-- LIMPIAR FILTROS -->
 
         <ion-button
           fill="clear"
@@ -184,14 +267,16 @@
           class="limpiar-filtros"
           *ngIf="hayFiltrosActivos"
           (click)="limpiarFiltros()">
+
           Limpiar filtros
+
         </ion-button>
 
       </div>
 
-      <!-- ============================== -->
+      <!-- ================================== -->
       <!-- SOLICITUDES ACTIVAS -->
-      <!-- ============================== -->
+      <!-- ================================== -->
 
       <div class="section-block">
 
@@ -210,19 +295,21 @@
           </div>
 
           <span class="counter-badge">
-            {{ solicitudesActivas.length }}
+            {{ solicitudesPendientes.length }}
           </span>
 
         </div>
 
+        <!-- ================================== -->
+        <!-- SIN SOLICITUDES PENDIENTES -->
+        <!-- ================================== -->
 
-        <!-- SIN ACTIVAS -->
         <div
           class="empty-state"
           *ngIf="
             !cargando &&
             !error &&
-            solicitudesActivas.length === 0
+            solicitudesPendientes.length === 0
           ">
 
           <h3>
@@ -236,15 +323,19 @@
 
         </div>
 
+        <!-- ================================== -->
+        <!-- LISTADO DE SOLICITUDES -->
+        <!-- ================================== -->
 
-        <!-- LISTA ACTIVAS -->
         <div
           class="solicitudes-grid"
-          *ngIf="solicitudesActivas.length > 0">
+          *ngIf="solicitudesPendientes.length > 0">
 
           <article
             class="solicitud-card"
-            *ngFor="let solicitud of solicitudesActivas">
+            *ngFor="let solicitud of solicitudesPendientes">
+
+            <!-- ENCABEZADO DE SOLICITUD -->
 
             <div class="solicitud-header">
 
@@ -259,9 +350,18 @@
                 </h3>
 
               </div>
-              <span class="urgencia-badge" [ngClass]="solicitud.urgencia">
+
+              <!-- URGENCIA -->
+
+              <span
+                class="urgencia-badge"
+                [ngClass]="solicitud.urgencia">
+
                 {{ mostrarUrgencia(solicitud.urgencia) }}
+
               </span>
+
+              <!-- ESTADO -->
 
               <span
                 class="estado-badge"
@@ -273,8 +373,13 @@
 
             </div>
 
+            <!-- ================================== -->
+            <!-- INFORMACIÓN DE SOLICITUD -->
+            <!-- ================================== -->
 
             <div class="solicitud-info">
+
+              <!-- SOLICITANTE -->
 
               <div class="info-item">
 
@@ -288,6 +393,7 @@
 
               </div>
 
+              <!-- CATEGORÍA -->
 
               <div class="info-item">
 
@@ -301,6 +407,7 @@
 
               </div>
 
+              <!-- DESCRIPCIÓN -->
 
               <div class="info-item full-width">
 
@@ -314,6 +421,7 @@
 
               </div>
 
+              <!-- FECHA -->
 
               <div class="info-item">
 
@@ -329,37 +437,75 @@
 
             </div>
 
+            <!-- ================================== -->
+            <!-- ACCIONES DE SOLICITUD -->
+            <!-- ================================== -->
 
             <div class="solicitud-actions">
 
-              <!-- PENDIENTE -->
+              <!-- ================================== -->
+              <!-- NUEVO: ATENDER SOLICITUD -->
+              <!-- PROTECCIÓN VISUAL CP-21 -->
+              <!-- ================================== -->
+
               <ion-button
                 *ngIf="solicitud.estado === 'pendiente'"
                 expand="block"
                 class="atender-button"
+                [disabled]="atendiendoId !== null || cargando"
                 (click)="atenderSolicitud(solicitud.id)">
 
-                Atender solicitud
+                <!-- INDICADOR DE CARGA -->
+
+                <ion-spinner
+                  *ngIf="atendiendoId === solicitud.id"
+                  name="crescent"
+                  slot="start">
+                </ion-spinner>
+
+                <!-- TEXTO DINÁMICO -->
+
+                {{
+                  atendiendoId === solicitud.id
+                    ? 'Asignando...'
+                    : 'Atender solicitud'
+                }}
 
               </ion-button>
 
+              <!-- ================================== -->
+              <!-- SOLICITUD ATENDIDA POR ESTE USUARIO -->
+              <!-- ================================== -->
 
-              <!-- ATENDIDA -->
-              <ion-button
-                *ngIf="solicitud.estado === 'atendida' && solicitud.atendido_por === usuario?.id"
-                expand="block"
-                class="terminar-button"
-                (click)="terminarSolicitud(solicitud.id)">
-                Marcar como terminada
-              </ion-button>
+            <ion-button
+              *ngIf="solicitud.estado === 'atendida' && solicitud.atendido_por === usuario?.id"
+              expand="block"
+              class="terminar-button"
+              [disabled]="terminandoId !== null"
+              (click)="terminarSolicitud(solicitud.id)">
 
-              <!-- Si está atendida pero por otro usuario, muestra quién la tiene, sin botón -->
+              <ion-spinner *ngIf="terminandoId === solicitud.id" name="crescent" slot="start"></ion-spinner>
+              <ion-icon *ngIf="terminandoId !== solicitud.id" slot="start" name="qr-code-outline"></ion-icon>
+
+              {{ terminandoId === solicitud.id ? 'Cerrando...' : 'Escanear QR y terminar' }}
+
+            </ion-button>
+
+              <!-- ================================== -->
+              <!-- SOLICITUD ATENDIDA POR OTRO USUARIO -->
+              <!-- ================================== -->
+
               <div
                 class="info-atendida-otro"
-                *ngIf="solicitud.estado === 'atendida' && solicitud.atendido_por !== usuario?.id">
-                Esta solicitud está siendo atendida por otro miembro del equipo.
-              </div>
+                *ngIf="
+                  solicitud.estado === 'atendida' &&
+                  solicitud.atendido_por !== usuario?.id
+                ">
 
+                Esta solicitud está siendo atendida por otro
+                miembro del equipo.
+
+              </div>
 
             </div>
 
@@ -369,10 +515,9 @@
 
       </div>
 
-
-      <!-- ============================== -->
+      <!-- ================================== -->
       <!-- HISTORIAL -->
-      <!-- ============================== -->
+      <!-- ================================== -->
 
       <div class="section-block history-section">
 
@@ -396,8 +541,10 @@
 
         </div>
 
-
+        <!-- ================================== -->
         <!-- SIN HISTORIAL -->
+        <!-- ================================== -->
+
         <div
           class="empty-history"
           *ngIf="
@@ -409,8 +556,10 @@
 
         </div>
 
+        <!-- ================================== -->
+        <!-- LISTADO DE HISTORIAL -->
+        <!-- ================================== -->
 
-        <!-- HISTORIAL -->
         <div
           class="solicitudes-grid"
           *ngIf="solicitudesHistorial.length > 0">
@@ -418,6 +567,8 @@
           <article
             class="solicitud-card historial-card"
             *ngFor="let solicitud of solicitudesHistorial">
+
+            <!-- ENCABEZADO -->
 
             <div class="solicitud-header">
 
@@ -433,17 +584,19 @@
 
               </div>
 
-              <span
-                class="estado-badge terminada">
-
+              <span class="estado-badge terminada">
                 Terminada
-
               </span>
 
             </div>
 
+            <!-- ================================== -->
+            <!-- INFORMACIÓN DEL HISTORIAL -->
+            <!-- ================================== -->
 
             <div class="solicitud-info">
+
+              <!-- SOLICITANTE -->
 
               <div class="info-item">
 
@@ -457,6 +610,7 @@
 
               </div>
 
+              <!-- CATEGORÍA -->
 
               <div class="info-item">
 
@@ -470,6 +624,7 @@
 
               </div>
 
+              <!-- DESCRIPCIÓN -->
 
               <div class="info-item full-width">
 
@@ -483,6 +638,7 @@
 
               </div>
 
+              <!-- FECHA DE CREACIÓN -->
 
               <div class="info-item">
 
@@ -496,6 +652,7 @@
 
               </div>
 
+              <!-- ÚLTIMA ACTUALIZACIÓN -->
 
               <div class="info-item">
 
@@ -511,6 +668,7 @@
 
             </div>
 
+            <!-- SOLICITUD FINALIZADA -->
 
             <div class="solicitud-finalizada">
               Solicitud finalizada

@@ -51,6 +51,36 @@ CREATE TABLE push_token (
     fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE solicitud
+ADD COLUMN descripcion_trabajo TEXT
+CHECK (char_length(descripcion_trabajo) <= 500);
+
+-- 1. Agregar las columnas permitiendo NULL
+ALTER TABLE usuario
+ADD COLUMN rut VARCHAR(10),
+ADD COLUMN telefono VARCHAR(20);
+
+-- 2. Asignar identificadores únicos a los usuarios existentes
+WITH usuarios AS (
+    SELECT ctid, ROW_NUMBER() OVER (ORDER BY ctid) AS numero
+    FROM usuario
+    WHERE rut IS NULL OR telefono IS NULL
+)
+UPDATE usuario u
+SET rut = 'TEST' || LPAD(usuarios.numero::TEXT, 3, '0'),
+    telefono = COALESCE(u.telefono, '1')
+FROM usuarios
+WHERE u.ctid = usuarios.ctid;
+
+-- 3. Modificar las columnas para que no permitan NULL
+ALTER TABLE usuario
+ALTER COLUMN rut SET NOT NULL,
+ALTER COLUMN telefono SET NOT NULL;
+
+-- 4. Establecer RUT como único
+ALTER TABLE usuario
+ADD CONSTRAINT usuario_rut_unique UNIQUE (rut);
+
 CREATE INDEX idx_push_token_usuario ON push_token (usuario_id);
 
 INSERT INTO sala (nombre, codigo_qr) VALUES ('Sala 204', 'QR-SALA-204');

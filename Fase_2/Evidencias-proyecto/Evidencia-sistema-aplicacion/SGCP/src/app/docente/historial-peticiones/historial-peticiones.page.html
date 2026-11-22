@@ -1,4 +1,4 @@
-
+<!--historial-peticiones.page.html-->
 <ion-content class="ion-padding">
 
   <h1 class="titulo-pagina">Historial de peticiones</h1>
@@ -35,6 +35,26 @@
 
     <span class="categoria-label">{{ etiquetaCategoria(s.categoria) }}</span>
     <p class="descripcion">{{ s.descripcion }}</p>
+
+    <!-- Trabajo realizado: solo se muestra en solicitudes terminadas -->
+    <div class="trabajo-realizado" *ngIf="s.estado === 'terminada'">
+      <span class="trabajo-label">Trabajo realizado</span>
+      <p [class.sin-descripcion]="!s.descripcion_trabajo">
+        {{ s.descripcion_trabajo || 'Descripción no otorgada' }}
+      </p>
+    </div>
+
+    <!-- Cancelar: solo si la petición aún no está terminada -->
+    <ion-button
+      *ngIf="puedeCancelar(s.estado)"
+      class="btn-cancelar-peticion"
+      expand="block"
+      fill="outline"
+      color="danger"
+      [disabled]="cancelandoId !== null"
+      (click)="cancelar(s)">
+      {{ cancelandoId === s.id ? 'Cancelando...' : 'Cancelar petición' }}
+    </ion-button>
   </div>
 
   <button class="btn-volver-flotante" (click)="volver()">

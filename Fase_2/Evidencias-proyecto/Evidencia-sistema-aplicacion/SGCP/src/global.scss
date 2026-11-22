@@ -36,3 +36,16 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
 
+/* Escáner QR: oculta la app y deja ver la cámara */
+body.barcode-scanner-active {
+  visibility: hidden;
+  --background: transparent;
+  --ion-background-color: transparent;
+}
+
+/* El modal sí se ve, pero con fondo transparente */
+.modal-scanner {
+  visibility: visible;
+  --background: transparent;
+  --ion-background-color: transparent;
+}

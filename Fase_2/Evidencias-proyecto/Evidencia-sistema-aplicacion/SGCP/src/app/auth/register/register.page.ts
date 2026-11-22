@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+//register.page.ts
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular/lazy';
@@ -22,6 +23,9 @@ export class RegisterPage {
   nombre = '';
   apellido = '';
   email = '';
+
+  rut = '';
+  telefono = '';
 
   contrasena = '';
   confirmarContrasena = '';
@@ -63,14 +67,63 @@ export class RegisterPage {
     }
   ];
 
+  // Normalización de RUT.
+  private normalizarRut(rut: string): string {
+    return rut
+      .replace(/\./g, '')
+      .replace(/\s/g, '')
+      .toUpperCase();
+  }
+
+  // Módulo 11 RUT.
+  private validarRut(rut: string): boolean {
+    const rutNormalizado = this.normalizarRut(rut);
+
+    if (!/^\d{7,8}-[\dK]$/.test(rutNormalizado)) {
+      return false;
+    }
+
+    const [cuerpo, digitoIngresado] = rutNormalizado.split('-');
+    let suma = 0;
+    let multiplicador = 2;
+
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+      suma += Number(cuerpo[i]) * multiplicador;
+      multiplicador =
+        multiplicador === 7 ? 2 : multiplicador + 1;
+    }
+
+    const resto = 11 - (suma % 11);
+    let digitoCalculado: string;
+
+    if (resto === 11) {
+      digitoCalculado = '0';
+    } else if (resto === 10) {
+      digitoCalculado = 'K';
+    } else {
+      digitoCalculado = String(resto);
+    }
+    return digitoCalculado === digitoIngresado;
+  }
+
+  // Validación de teléfono.
+  private validarTelefono(telefono: string): boolean {
+    const digitos = telefono.replace(/\D/g, '');
+    return digitos.length >= 8 && digitos.length <= 15;
+  }
+
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
 
   registrarse() {
+
+    // Evita registros duplicados por doble toque
+    if (this.cargando) return;
 
     this.error = '';
 
@@ -85,11 +138,16 @@ export class RegisterPage {
         .trim()
         .toLowerCase();
 
+    const rutNormalizado = this.normalizarRut(this.rut);
+    const telefono = this.telefono.trim();
+
 
     if (
       !nombre ||
       !apellido ||
       !email ||
+      !rutNormalizado ||
+      !telefono ||
       !this.contrasena ||
       !this.confirmarContrasena ||
       !this.tipoCuenta
@@ -97,11 +155,18 @@ export class RegisterPage {
 
       this.error =
         'Todos los campos son obligatorios';
-
       return;
-
     }
 
+    if (!this.validarRut(rutNormalizado)) {
+      this.error = 'El RUT ingresado no es válido';
+      return;
+    }
+
+    if (!this.validarTelefono(telefono)) {
+      this.error = 'El teléfono ingresado no es válido';
+      return;
+    }
 
     if (
       this.tipoCuenta === 'staff' &&
@@ -155,6 +220,7 @@ export class RegisterPage {
 
 
     this.cargando = true;
+    this.cdr.detectChanges();
 
 
     this.authService
@@ -163,6 +229,9 @@ export class RegisterPage {
         nombre,
         apellido,
         email,
+
+        rut: rutNormalizado,
+        telefono,
 
         contrasena:
           this.contrasena,
@@ -176,6 +245,7 @@ export class RegisterPage {
         next: () => {
 
           this.cargando = false;
+          this.cdr.detectChanges();
 
           this.router.navigate(
             ['/login'],
@@ -193,9 +263,18 @@ export class RegisterPage {
 
           this.cargando = false;
 
-          this.error =
-            err.error?.error ||
-            'No se pudo completar el registro';
+          if (err.status === 0) {
+            // El servidor no respondió (sin red, o el servidor de Render está dormido)
+            this.error =
+              'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
+          } else {
+            this.error =
+              err.error?.error ||
+              'No se pudo completar el registro';
+          }
+
+          // Refresca la pantalla: sin esto el botón queda en "Creando cuenta..."
+          this.cdr.detectChanges();
 
         }
 

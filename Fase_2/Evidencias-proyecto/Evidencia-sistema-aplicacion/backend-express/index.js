@@ -1,4 +1,7 @@
+//index.js
 const express = require('express');
+// Configuración para emailService.js
+require('dotenv').config();
 const cors = require('cors');
 const pool = require('./db');
 
@@ -143,6 +146,48 @@ app.get('/api/solicitudes/mias', verificarToken, async (req, res) => {
   }
 });
 
+// Cancelar una petición propia que aún no está terminada
+app.patch('/api/solicitudes/:id/cancelar', verificarToken, async (req, res) => {
+  const { id } = req.params;
+  const usuario_id = req.usuario.id;
+
+  try {
+    // El UPDATE es atómico: solo cancela si es del usuario y no está terminada
+    const result = await pool.query(
+      `UPDATE solicitud
+       SET estado = 'cancelada', fecha_actualizacion = NOW()
+       WHERE id = $1 AND usuario_id = $2 AND estado IN ('pendiente', 'atendida')
+       RETURNING *`,
+      [id, usuario_id]
+    );
+
+    if (result.rowCount > 0) {
+      return res.json({ mensaje: 'Petición cancelada', solicitud: result.rows[0] });
+    }
+
+    // No se pudo: averiguar por qué
+    const actual = await pool.query(
+      'SELECT estado, usuario_id FROM solicitud WHERE id = $1',
+      [id]
+    );
+    const s = actual.rows[0];
+
+    if (!s || Number(s.usuario_id) !== Number(usuario_id)) {
+      return res.status(404).json({ error: 'Petición no encontrada' });
+    }
+
+    return res.status(409).json({
+      error:
+        s.estado === 'terminada'
+          ? 'Esta petición ya fue terminada, no se puede cancelar.'
+          : 'Esta petición ya estaba cancelada.',
+    });
+  } catch (err) {
+    console.error('Error en /api/solicitudes/:id/cancelar:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Consulta de cobertura por categoría (para avisar al solicitante si no hay staff disponible)
 app.get('/api/soporte/cobertura/:categoria', verificarToken, async (req, res) => {
   const { categoria } = req.params;
@@ -162,6 +207,8 @@ app.get('/api/soporte/cobertura/:categoria', verificarToken, async (req, res) =>
   }
 });
 
+// Detalles de usuario.
+app.use('/api/usuarios', require('./routes/usuarioDetalle'));
 const usuariosRoutes = require('./routes/usuarios');
 app.use('/api/usuarios', usuariosRoutes);
 
@@ -179,4 +226,8 @@ app.use('/api/admin/solicitudes', solicitudesAdminRoutes);
 const pushRoutes = require('./routes/push');
 app.use('/api/push', pushRoutes);
 
-app.listen(3000, () => console.log('Servidor corriendo en puerto 3000'));
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(3000, () => console.log('Servidor corriendo en puerto 3000'));
+}

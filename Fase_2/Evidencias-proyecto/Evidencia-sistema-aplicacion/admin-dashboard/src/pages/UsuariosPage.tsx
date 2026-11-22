@@ -1,5 +1,6 @@
 // src/pages/UsuariosPage.tsx
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography,
   Table,
@@ -15,6 +16,7 @@ import {
   Alert,
   CircularProgress,
   Box,
+  Button
 } from '@mui/material';
 import { usuarioService, type Usuario } from '../services/usuariosService';
 
@@ -30,6 +32,7 @@ export function UsuariosPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [actualizandoId, setActualizandoId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     cargarUsuarios();
@@ -88,6 +91,7 @@ export function UsuariosPage() {
               <TableCell>Email</TableCell>
               <TableCell>Rol actual</TableCell>
               <TableCell>Asignar rol</TableCell>
+              <TableCell>Ficha de usuario</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -103,7 +107,7 @@ export function UsuariosPage() {
                   />
                 </TableCell>
                 <TableCell>
-                  {usuario.rol === 'docente' || usuario.rol === 'administrador' ? (
+                  {usuario.rol === 'solicitante' || usuario.rol === 'administrador' ? (
                     <Typography variant="body2" color="text.secondary">
                       No aplica
                     </Typography>
@@ -126,6 +130,15 @@ export function UsuariosPage() {
                       ))}
                     </Select>
                   )}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => navigate(`/usuarios/${usuario.id}`)}
+                  >
+                    Ver ficha
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
