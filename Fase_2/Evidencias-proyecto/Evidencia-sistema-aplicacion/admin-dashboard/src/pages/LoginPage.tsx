@@ -1,4 +1,4 @@
-// src/pages/LoginPage.tsx
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { authService } from '../services/authService';
+import logo from '../assets/logoDuoc.png';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   const iniciarSesion = async (e: React.FormEvent) => {
-    e.preventDefault(); // evita que el form recargue la página, comportamiento HTML por defecto
+    e.preventDefault();
     setError('');
     setCargando(true);
 
@@ -28,7 +29,6 @@ export function LoginPage() {
       await authService.login(email, contrasena);
       navigate('/usuarios');
     } catch (err: any) {
-      // Si el backend devolvió un error (401, 403, etc.), axios lo expone en err.response.data
       const mensaje = err.response?.data?.error || err.message || 'No se pudo iniciar sesión';
       setError(mensaje);
     } finally {
@@ -46,6 +46,13 @@ export function LoginPage() {
           alignItems: 'center',
         }}
       >
+        <Box
+          component="img"
+          src={logo}
+          alt="Logo de Duoc UC"
+          sx={{ width: 200, height: 'auto', mb: 2 }}
+        />
+
         <Typography variant="h5" component="h1" gutterBottom>
           SGCP — Panel de administración
         </Typography>
