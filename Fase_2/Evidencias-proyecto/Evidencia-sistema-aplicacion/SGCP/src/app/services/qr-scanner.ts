@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { ModalController } from '@ionic/angular/lazy';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
-import { environment } from '../../environments/environment';
 import { QrScannerModalComponent } from '../components/qr-scanner-modal/qr-scanner-modal.component';
 
 export type ResultadoEscaneo =
@@ -17,28 +16,25 @@ export class QrScannerService {
   constructor(private modalCtrl: ModalController) {}
 
   async escanear(): Promise<ResultadoEscaneo> {
-    // En el navegador solo se permite en desarrollo, para poder probar sin celular
-    if (!Capacitor.isNativePlatform()) {
-      if (!environment.production) {
-        const codigo = window.prompt('Código QR de la sala (solo desarrollo)')?.trim();
-        return codigo ? { estado: 'ok', codigo } : { estado: 'cancelado' };
+    const nativo = Capacitor.isNativePlatform();
+
+    // En celular se piden los permisos de cámara antes de abrir el escáner.
+    // En el navegador, el propio navegador pide el permiso al encender la cámara.
+    if (nativo) {
+      const permiso = await BarcodeScanner.checkPermissions();
+      let camara = permiso.camera;
+      if (camara !== 'granted') {
+        camara = (await BarcodeScanner.requestPermissions()).camera;
       }
-      return { estado: 'error' };
+      if (camara !== 'granted') return { estado: 'permiso_denegado' };
     }
 
-    const permiso = await BarcodeScanner.checkPermissions();
-    let camara = permiso.camera;
-    if (camara !== 'granted') {
-      camara = (await BarcodeScanner.requestPermissions()).camera;
-    }
-    if (camara !== 'granted') return { estado: 'permiso_denegado' };
-
-    // La cámara corre dentro de la propia app (startScan), sin abrir otra Activity
     const modal = await this.modalCtrl.create({
       component: QrScannerModalComponent,
-      cssClass: 'modal-scanner',
-      showBackdrop: false,
-      backdropDismiss: true, // permite cerrar con el botón "atrás" de Android
+      // Celular: modal transparente para ver la cámara detrás. Navegador: modal normal.
+      cssClass: nativo ? 'modal-scanner' : undefined,
+      showBackdrop: !nativo,
+      backdropDismiss: true, // permite cerrar con el botón "atrás" de Android o tocando fuera
     });
     await modal.present();
 
