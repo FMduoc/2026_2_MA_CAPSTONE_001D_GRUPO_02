@@ -18,6 +18,9 @@ export class LoginPage implements OnInit {
   contrasena = '';
   error = '';
   cargando = false;
+  emailNoVerificado = false;
+  reenviando = false;
+  mensajeReenvio = '';
 
   constructor(
     private authService: AuthService,
@@ -35,11 +38,15 @@ export class LoginPage implements OnInit {
     }
   }
 
+  // Inicio de sesión.
   iniciarSesion() {
     if (this.cargando) return;
 
     this.error = '';
+    this.emailNoVerificado = false;
+    this.mensajeReenvio = '';
     this.cargando = true;
+
     this.cdr.detectChanges();
 
     this.authService.login(this.email.trim().toLowerCase(), this.contrasena).subscribe({
@@ -67,12 +74,59 @@ export class LoginPage implements OnInit {
       },
       error: (err) => {
         console.error('Error al iniciar sesión:', err);
-        this.error = err.error?.error || 'Email o contraseña incorrectos';
+
+        if (
+          err.status === 403 &&
+          err.error?.codigo === 'EMAIL_NO_VERIFICADO'
+        ) {
+          this.emailNoVerificado = true;
+          this.error = 'Tu correo electrónico todavía no ha sido verificado.';
+        } else {
+          this.error = err.error?.error || 'Email o contraseña incorrectos';
+        }
+
         this.cargando = false;
         this.cdr.detectChanges();
       },
     });
   }
+
+  // Reenvío de correo de verificación.
+  async reenviarVerificacion() {
+    if (this.reenviando || !this.email.trim()) return;
+
+    this.reenviando = true;
+    this.mensajeReenvio = '';
+    this.error = '';
+
+    this.cdr.detectChanges();
+
+    this.authService
+      .reenviarVerificacion(this.email.trim().toLowerCase())
+      .subscribe({
+        next: (respuesta) => {
+          this.mensajeReenvio = respuesta.mensaje;
+          this.reenviando = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error al reenviar verificación:', err);
+
+          if (err.status === 429) {
+            this.error =
+              'Has solicitado demasiados correos. Inténtalo nuevamente más tarde.';
+          } else {
+            this.error =
+              err.error?.error ||
+              'No se pudo solicitar el reenvío. Inténtalo nuevamente.';
+          }
+
+          this.reenviando = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
 
   private redirigirSegunRol(rol?: string) {
     const rolesSoporte = ['tecnico', 'enfermeria', 'seguridad', 'limpieza'];

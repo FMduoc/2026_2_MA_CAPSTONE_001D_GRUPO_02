@@ -29,10 +29,17 @@ export class PendienteAprobacionPage {
 
     try {
       const usuario = await this.authService.obtenerPerfilActual();
-
+      
       if (usuario.rol === 'staff') {
         this.mensaje = 'Tu cuenta todavía está pendiente de aprobación.';
-      } else {
+      } 
+      
+      /*
+      if (!usuario.aprobado) {
+        this.mensaje = 'Tu cuenta todavía está pendiente de aprobación administrativa.';
+      } 
+      */
+      else {
         this.redirigirSegunRol(usuario.rol);
       }
     } catch {
